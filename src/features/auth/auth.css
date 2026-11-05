@@ -19,11 +19,11 @@
   .auth-notice { @apply mb-3 text-center text-xs text-[#777168]; }
 
   /* 로그인 */
-  .login-page { @apply flex min-h-svh flex-col justify-center bg-canvas px-5 pb-[14svh]; }
+  .login-page { @apply flex min-h-svh flex-col justify-center bg-canvas px-5 pb-[5svh]; }
   .login-brand { @apply flex flex-col items-center text-[#50604b]; }
-  .login-mark { @apply block h-[54px] w-[80px] object-contain; }
-  .login-brand span { @apply mt-2.5 text-[19px] leading-[1.2]; }
-  .login-tagline { @apply mb-[30px] mt-[17px] text-center font-serif text-sm text-[#777168]; }
+  .login-mark { @apply block h-[64px] w-[96px] object-contain; }
+  .login-brand span { @apply mt-2 text-[20px] leading-[1.2]; }
+  .login-tagline { @apply mb-[30px] mt-[14px] text-center font-serif text-sm text-[#777168]; }
   .login-form { @apply flex flex-col gap-2; }
   .login-form .auth-error { @apply min-h-[18px]; }
   .login-form .auth-submit { @apply mt-[11px]; }
@@ -31,12 +31,12 @@
 
   /* 회원가입 */
   .signup-page { @apply relative flex min-h-svh flex-col bg-canvas px-5 pb-[calc(env(safe-area-inset-bottom)+30px)] text-[#252525]; }
-  .signup-header { @apply relative flex h-[56px] items-center justify-center pt-[40px] box-content; }
+  .signup-header { @apply relative box-content flex h-[56px] items-center justify-center pt-[68px]; }
   .signup-header h1 { @apply m-0 text-[17px] font-semibold; }
   .page-back { @apply absolute left-[-6px] flex h-10 w-10 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[#252525]; }
   .page-back svg { @apply h-[26px] w-[26px]; }
   .signup-header .page-back { @apply bottom-2; }
-  .signup-form { @apply mt-[50px] flex flex-1 flex-col; }
+  .signup-form { @apply mt-[38px] flex flex-1 flex-col; }
   .signup-field { @apply mb-[22px] flex flex-col gap-[7px]; }
   .signup-field label { @apply px-px text-sm font-medium; }
   .signup-hint { @apply m-0 px-px text-xs text-[#9e9b95]; }
