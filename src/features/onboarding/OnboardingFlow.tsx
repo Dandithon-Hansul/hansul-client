@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { BackIcon, SearchIcon } from '../../components/icons'
 import RegionSheet from '../../components/region/RegionSheet'
-import { findRegionByCode } from '../../lib/regions'
+import { findRegionByCode, regionLabel } from '../../lib/regions'
 import { FOOD_ICONS } from './foodIcons'
 import './onboarding.css'
 
@@ -65,7 +65,7 @@ function OnboardingFlow({ name, setName, regionCode, setRegionCode, favoriteFood
           <>
             <p className="onboarding-question">어느 지역에 거주하시나요?</p>
             <button className={`onboarding-input region-input ${region ? 'has-value' : ''}`} type="button" onClick={() => setSheetOpen(true)} aria-haspopup="dialog">
-              {region ? region.sigungu : <><SearchIcon className="region-input-icon" />지역을 설정해주세요.</>}
+              {region ? regionLabel(region) : <><SearchIcon className="region-input-icon" />지역을 설정해주세요.</>}
             </button>
             {sheetOpen && (
               <RegionSheet

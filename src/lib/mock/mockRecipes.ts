@@ -37,7 +37,7 @@ export const MOCK_PUBLIC_PROFILES: Record<string, { profile: PublicProfile; reci
       id: 'u-kim-hansul',
       display_name: '김한술',
       avatar_url: null,
-      region: { code: '27260', sido: '대구광역시', sigungu: '수성구', dong: null },
+      region: { code: '27000', sido: '대구광역시', sigungu: '', dong: null },
       bio: '안녕하세요 여러분ㅎㅎ 같이 레시피 공유해봐요~',
       stats: { transmitted_recipes: 5, likes_received: 63 },
     },

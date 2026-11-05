@@ -63,17 +63,17 @@ describe('프로필 편집', () => {
     await user.click(screen.getByRole('button', { name: /거주지역/ }))
     const sheet = screen.getByRole('dialog')
     await user.click(within(sheet).getByRole('tab', { name: '대구광역시' }))
-    await user.click(within(sheet).getByRole('button', { name: '수성구' }))
+    await user.click(within(sheet).getByRole('button', { name: '대구광역시' }))
     await user.click(within(sheet).getByRole('button', { name: '선택완료' }))
 
     await user.click(screen.getByRole('button', { name: '저장하기' }))
     expect(await screen.findByText('한술할매')).toBeInTheDocument()
-    expect(screen.getByText('대구광역시 · 수성구')).toBeInTheDocument()
+    expect(screen.getByText('대구광역시')).toBeInTheDocument()
     expect(currentPath()).toHaveTextContent('/profile')
 
     const saved = readMockDb().profiles['mock-user-demo']
     expect(saved.display_name).toBe('한술할매')
-    expect(saved.region?.code).toBe('27260')
+    expect(saved.region?.code).toBe('27000')
   })
 })
 
@@ -82,7 +82,7 @@ describe('다른 사용자 프로필', () => {
     loginAsDemo()
     renderApp('/users/u-kim-hansul')
     expect(await screen.findByText('안녕하세요 여러분ㅎㅎ 같이 레시피 공유해봐요~')).toBeInTheDocument()
-    expect(screen.getByText('대구광역시 · 수성구')).toBeInTheDocument()
+    expect(screen.getByText('대구광역시')).toBeInTheDocument()
     expect(screen.getAllByRole('definition').map((item) => item.textContent)).toEqual(['5', '63'])
     expect(await screen.findByRole('link', { name: '누른 국수' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '프로필 편집' })).not.toBeInTheDocument()

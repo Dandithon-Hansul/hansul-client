@@ -9,7 +9,7 @@
   .region-tabs { @apply flex shrink-0 gap-3; }
   .region-tabs button { @apply h-[47px] flex-1 cursor-pointer rounded-[3px] border border-[#ded7ca] bg-white text-[15px] text-[#6b6b6b]; }
   .region-tabs button.selected { @apply border-[#c5d0c1] bg-[#c5d0c1] text-[#252525]; }
-  .district-columns { @apply mt-[44px] grid min-h-0 flex-1 grid-cols-2 overflow-y-auto px-1.5 pb-4; }
+  .district-columns { @apply mt-[44px] grid min-h-0 flex-1 grid-cols-2 content-start overflow-y-auto px-1.5 pb-4; }
   .district-column-label { @apply m-0 mb-[12px] text-[15px] font-semibold text-black; }
   .district-column ul { @apply m-0 list-none p-0; }
   .district-column li button { @apply cursor-pointer border-0 bg-transparent px-[3px] py-[9px] text-left text-[15px] leading-[21px] text-[#6c6c6c]; }

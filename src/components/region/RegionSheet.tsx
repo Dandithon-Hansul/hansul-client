@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { districtColumnsOf, findRegionByCode, SIDO_NAMES, type RegionOption, type SidoName } from '../../lib/regions'
+import { districtColumnsOf, findRegionByCode, regionLabel, SIDO_NAMES, type RegionOption, type SidoName } from '../../lib/regions'
 import { CloseIcon } from '../icons'
 import './region-sheet.css'
 
@@ -12,7 +12,7 @@ type Props = {
 
 /**
  * 거주 지역 선택 바텀시트 — Figma 최종 디자인 기준 (온보딩·프로필 편집 공용)
- * 시·도 탭 → "시 / 군"(대구는 "구 / 군") 두 열 목록, 고른 곳은 굵게 + 밑줄, "선택완료"로 확정
+ * 시·도 탭 → 경북은 "시 / 군" 두 열 목록, 대구는 '대구광역시' 한 줄. 고른 곳은 굵게 + 밑줄, "선택완료"로 확정
  * 부모에서 {open && <RegionSheet …/>} 로 렌더 (열 때마다 현재 값으로 시작)
  */
 function RegionSheet({ value, onClose, onConfirm }: Props) {
@@ -33,14 +33,14 @@ function RegionSheet({ value, onClose, onConfirm }: Props) {
 
         <div className="district-columns">
           {districtColumnsOf(tab).map((column) => (
-            <div className="district-column" key={column.label}>
-              <p className="district-column-label">{column.label}</p>
+            <div className="district-column" key={column.label ?? 'all'}>
+              {column.label && <p className="district-column-label">{column.label}</p>}
               <ul>
                 {column.items.map((region) => {
                   const isSelected = selected?.code === region.code
                   return (
                     <li key={region.code}>
-                      <button type="button" className={isSelected ? 'selected' : ''} aria-pressed={isSelected} onClick={() => setSelected(region)}>{region.sigungu}</button>
+                      <button type="button" className={isSelected ? 'selected' : ''} aria-pressed={isSelected} onClick={() => setSelected(region)}>{regionLabel(region)}</button>
                     </li>
                   )
                 })}
