@@ -32,6 +32,7 @@ describe('toKoreanAuthMessage', () => {
   it('Supabase 에러 코드를 한국어로 바꾼다', () => {
     expect(toKoreanAuthMessage({ code: 'invalid_credentials' })).toBe('아이디 또는 비밀번호가 올바르지 않아요.')
     expect(toKoreanAuthMessage({ message: 'User already registered' })).toBe('이미 사용 중인 아이디예요.')
+    expect(toKoreanAuthMessage({ status: 0, message: 'Failed to fetch' })).toContain('서버에 연결하지 못했어요')
     expect(toKoreanAuthMessage({ status: 500 })).toBe('문제가 생겼어요. 잠시 후 다시 시도해주세요.')
   })
 })

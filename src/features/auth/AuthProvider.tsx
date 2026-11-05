@@ -18,8 +18,9 @@ function AuthProvider({ children, service = authService }: { children: ReactNode
       .then((current) => {
         if (alive) setSession(current)
       })
-      .catch(() => {
-        /* 설정 오류 등 → 비로그인으로 취급 */
+      .catch((error: unknown) => {
+        // .env 설정 오류 등 → 비로그인으로 취급하고 콘솔에 원인 표시
+        console.error('[auth] 세션을 읽지 못했어요:', error)
       })
       .finally(() => {
         if (alive) setLoading(false)

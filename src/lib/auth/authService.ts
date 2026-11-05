@@ -19,6 +19,11 @@ export type AuthService = {
 
 // ───────────── 실제: Supabase Auth ─────────────
 
+/** .env 설정 누락이면 그 안내를, 아니면 연결 실패 문구를 보여줌 */
+function connectionMessage(error: unknown) {
+  return error instanceof Error && error.message.includes('VITE_SUPABASE') ? error.message : '서버에 연결하지 못했어요.'
+}
+
 function fromSupabase(session: Session | null): AuthSession | null {
   if (!session) return null
   const user = session.user
@@ -32,15 +37,20 @@ const supabaseAuth: AuthService = {
     return fromSupabase(data.session)
   },
   onChange(listener) {
-    const { data } = getSupabase().auth.onAuthStateChange((_event, session) => listener(fromSupabase(session)))
-    return () => data.subscription.unsubscribe()
+    try {
+      const { data } = getSupabase().auth.onAuthStateChange((_event, session) => listener(fromSupabase(session)))
+      return () => data.subscription.unsubscribe()
+    } catch {
+      // .env 설정이 없으면 구독 없이 진행 (getSession 쪽에서 콘솔에 원인 표시) — 앱 전체가 멈추지 않도록
+      return () => {}
+    }
   },
   async signIn(loginId, password) {
     try {
       const { error } = await getSupabase().auth.signInWithPassword({ email: toAuthEmail(loginId), password })
       return error ? { ok: false, message: toKoreanAuthMessage(error) } : { ok: true }
-    } catch {
-      return { ok: false, message: '서버에 연결하지 못했어요.' }
+    } catch (error) {
+      return { ok: false, message: connectionMessage(error) }
     }
   },
   async signUp(loginId, password) {
@@ -55,8 +65,8 @@ const supabaseAuth: AuthService = {
       if (data.user && data.user.identities?.length === 0) return { ok: false, message: '이미 사용 중인 아이디예요.' }
       // Supabase 에서 "Confirm email" 이 켜져 있으면 세션이 안 생김
       return { ok: true, needsEmailConfirm: !data.session }
-    } catch {
-      return { ok: false, message: '서버에 연결하지 못했어요.' }
+    } catch (error) {
+      return { ok: false, message: connectionMessage(error) }
     }
   },
   async signOut() {

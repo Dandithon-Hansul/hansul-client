@@ -40,5 +40,6 @@ export function toKoreanAuthMessage(error: { code?: string; message?: string; st
   if (code === 'weak_password' || message.includes('Password should be')) return `비밀번호는 ${PASSWORD_MIN}자 이상이어야 해요.`
   if (code === 'email_address_invalid') return '사용할 수 없는 아이디예요.'
   if (code === 'over_request_rate_limit' || error.status === 429) return '요청이 많아요. 잠시 후 다시 시도해주세요.'
+  if (error.status === 0 || message.includes('fetch')) return '서버에 연결하지 못했어요. 인터넷 연결이나 Supabase 주소를 확인해주세요.'
   return '문제가 생겼어요. 잠시 후 다시 시도해주세요.'
 }
