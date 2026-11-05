@@ -61,14 +61,26 @@ describe('로그인', () => {
 })
 
 describe('회원가입', () => {
+  it('세 칸을 다 채우기 전에는 버튼이 비활성화되고, 비밀번호 규칙 안내가 보인다', async () => {
+    const user = renderApp('/signup')
+    const button = await screen.findByRole('button', { name: '가입하고 시작하기' })
+    expect(button).toBeDisabled()
+    expect(screen.getByText('영문과 숫자를 포함해 8자 이상')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('아이디'), 'newcook')
+    await user.type(screen.getByLabelText('비밀번호'), 'secret123')
+    expect(button).toBeDisabled()
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'secret123')
+    expect(button).toBeEnabled()
+  })
+
   it('규칙에 안 맞으면 칸마다 안내 문구를 보여준다', async () => {
     const user = renderApp('/signup')
     await user.type(await screen.findByLabelText('아이디'), 'ab')
-    await user.type(screen.getByLabelText('비밀번호'), '123')
+    await user.type(screen.getByLabelText('비밀번호'), '12345678')
     await user.type(screen.getByLabelText('비밀번호 확인'), '999')
-    await user.click(screen.getByRole('button', { name: '가입하기' }))
+    await user.click(screen.getByRole('button', { name: '가입하고 시작하기' }))
     expect(screen.getByText('영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요.')).toBeInTheDocument()
-    expect(screen.getByText('비밀번호는 6자 이상이어야 해요.')).toBeInTheDocument()
+    expect(screen.getByText('비밀번호는 영문과 숫자를 포함해 8자 이상으로 입력해주세요.')).toBeInTheDocument()
     expect(screen.getByText('비밀번호가 일치하지 않아요.')).toBeInTheDocument()
   })
 
@@ -77,7 +89,7 @@ describe('회원가입', () => {
     await user.type(await screen.findByLabelText('아이디'), 'newcook')
     await user.type(screen.getByLabelText('비밀번호'), 'secret123')
     await user.type(screen.getByLabelText('비밀번호 확인'), 'secret123')
-    await user.click(screen.getByRole('button', { name: '가입하기' }))
+    await user.click(screen.getByRole('button', { name: '가입하고 시작하기' }))
     expect(await screen.findByText('어떤 이름을 사용하실 건가요?')).toBeInTheDocument()
     expect(path()).toHaveTextContent('/onboarding')
   })
@@ -87,7 +99,7 @@ describe('회원가입', () => {
     await user.type(await screen.findByLabelText('아이디'), DEMO_ACCOUNT.loginId)
     await user.type(screen.getByLabelText('비밀번호'), 'secret123')
     await user.type(screen.getByLabelText('비밀번호 확인'), 'secret123')
-    await user.click(screen.getByRole('button', { name: '가입하기' }))
+    await user.click(screen.getByRole('button', { name: '가입하고 시작하기' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('이미 사용 중인 아이디예요.')
     expect(path()).toHaveTextContent('/signup')
   })

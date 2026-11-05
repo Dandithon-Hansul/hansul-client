@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toAuthEmail, toKoreanAuthMessage, validateSignup } from './validation'
+import { isValidPassword, toAuthEmail, toKoreanAuthMessage, validateSignup } from './validation'
 
 describe('toAuthEmail', () => {
   it('아이디를 가짜 이메일로 바꾼다 (공백·대문자 정리)', () => {
@@ -12,19 +12,26 @@ describe('toAuthEmail', () => {
 
 describe('validateSignup', () => {
   it('규칙에 맞으면 에러가 없다', () => {
-    expect(validateSignup('hansol_01', '123456', '123456')).toEqual({})
+    expect(validateSignup('hansol_01', 'hansul123', 'hansul123')).toEqual({})
   })
   it('아이디·비밀번호·확인 칸을 각각 검사한다', () => {
     expect(validateSignup('', '', '')).toEqual({
       loginId: '아이디를 입력해주세요.',
-      password: '비밀번호는 6자 이상이어야 해요.',
+      password: '비밀번호는 영문과 숫자를 포함해 8자 이상으로 입력해주세요.',
       passwordConfirm: '비밀번호를 한 번 더 입력해주세요.',
     })
-    expect(validateSignup('ab', '123456', '654321')).toEqual({
+    expect(validateSignup('ab', 'hansul123', 'hansul124')).toEqual({
       loginId: '영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요.',
       passwordConfirm: '비밀번호가 일치하지 않아요.',
     })
-    expect(validateSignup('한글아이디', '123456', '123456').loginId).toBeDefined()
+    expect(validateSignup('한글아이디', 'hansul123', 'hansul123').loginId).toBeDefined()
+  })
+
+  it('비밀번호는 영문과 숫자를 포함해 8자 이상', () => {
+    expect(isValidPassword('hansul12')).toBe(true)
+    expect(isValidPassword('hansul1')).toBe(false) // 7자
+    expect(isValidPassword('12345678')).toBe(false) // 영문 없음
+    expect(isValidPassword('abcdefgh')).toBe(false) // 숫자 없음
   })
 })
 

@@ -1,32 +1,45 @@
 @reference "../../index.css";
 
-/* 로그인 화면은 App.css 의 .login-card 스타일을 그대로 쓰고, 추가된 요소만 여기서 정의 */
+/*
+ * 로그인·회원가입 — Figma 최종 디자인 기준 (402pt 폭 화면, 2x 캡처 값 ÷ 2)
+ * 입력 글자는 16px: 이보다 작으면 iPhone 에서 입력칸을 누를 때 화면이 확대됨
+ *                 (placeholder 만 Figma 처럼 14px)
+ */
 @layer components {
-  .auth-error { @apply m-0 min-h-[18px] px-0.5 text-xs leading-[18px] text-terra; }
-  .auth-error.center { @apply mb-2 text-center text-xs; }
-  .auth-notice { @apply mt-3 text-center text-xs text-[#8f887e]; }
-  .login-card .primary-button:disabled { @apply cursor-wait opacity-80; }
-  .login-card input[aria-invalid='true'] { @apply border-terra; }
+  /* 공용 입력칸·버튼 */
+  .auth-input { @apply h-[47px] w-full rounded-[3px] border border-[#ded7ca] bg-[#fffefd] px-[15px] text-base text-[#252525] outline-none; }
+  .auth-input::placeholder { @apply text-sm text-[#9e9b95]; }
+  .auth-input:focus { @apply border-[#9d9a8c]; }
+  .auth-input[aria-invalid='true'] { @apply border-terra; }
+  .auth-submit { @apply h-[47px] w-full cursor-pointer rounded-[3px] border-0 bg-[#45573e] text-[15px] font-semibold text-white; }
+  .auth-submit:disabled { @apply cursor-not-allowed border border-solid border-[#efebe4] bg-[#f8f5f0] font-normal text-[#5e5850]; }
+  .auth-submit[aria-busy='true'] { @apply cursor-wait opacity-80; }
+  .auth-error { @apply m-0 px-0.5 text-xs leading-[18px] text-terra; }
+  .auth-error.center { @apply mb-3 text-center; }
+  .auth-notice { @apply mb-3 text-center text-xs text-[#777168]; }
 
-  .auth-links { @apply mt-4 flex items-center justify-center gap-3 text-xs text-[#6f716f]; }
-  .auth-links button, .auth-links a { @apply cursor-pointer border-0 bg-transparent p-0 text-inherit no-underline; }
-  .auth-links button:hover, .auth-links a:hover { @apply underline; }
-  .auth-links span { @apply h-3 w-px bg-[#ded7ca]; }
+  /* 로그인 */
+  .login-page { @apply flex min-h-svh flex-col justify-center bg-canvas px-5 pb-[14svh]; }
+  .login-brand { @apply flex flex-col items-center text-[#50604b]; }
+  .login-mark { @apply block h-[54px] w-[80px] object-contain; }
+  .login-brand span { @apply mt-2.5 text-[19px] leading-[1.2]; }
+  .login-tagline { @apply mb-[30px] mt-[17px] text-center font-serif text-sm text-[#777168]; }
+  .login-form { @apply flex flex-col gap-2; }
+  .login-form .auth-error { @apply min-h-[18px]; }
+  .login-form .auth-submit { @apply mt-[11px]; }
+  .login-signup { @apply mx-auto mt-4 block p-1 text-xs text-[#777168] underline underline-offset-4; }
 
-  /* 회원가입: 온보딩 화면(onboarding.css)과 같은 톤 */
-  .signup-page { @apply relative flex min-h-svh flex-col bg-canvas px-[27px] pb-[calc(env(safe-area-inset-bottom)+30px)] pt-[124px] text-ink; }
-  .signup-back { @apply absolute left-[14px] top-20 h-8 w-8 cursor-pointer border-0 bg-transparent p-0 text-[30px] leading-6 text-[#777168]; }
-  .signup-page h1 { @apply m-0 font-serif text-[22px] font-bold leading-[1.34] tracking-[-.8px]; }
-  .signup-subtitle { @apply mb-[48px] mt-[13px] text-xs text-[#777168]; }
-  .signup-form { @apply flex flex-1 flex-col gap-2; }
-  .signup-form label { @apply mt-3 text-sm text-[#5e5850]; }
-  .signup-input { @apply h-[49px] w-full rounded-[3px] border border-[#ded7ca] bg-white px-[15px] text-[13px] text-[#5e5850] outline-none; }
-  .signup-input::placeholder { @apply text-[#a8a196]; }
-  .signup-input:focus { @apply border-[#9d9a8c]; }
-  .signup-input[aria-invalid='true'] { @apply border-terra; }
+  /* 회원가입 */
+  .signup-page { @apply relative flex min-h-svh flex-col bg-canvas px-5 pb-[calc(env(safe-area-inset-bottom)+30px)] text-[#252525]; }
+  .signup-header { @apply relative flex h-[56px] items-center justify-center pt-[40px] box-content; }
+  .signup-header h1 { @apply m-0 text-[17px] font-semibold; }
+  .page-back { @apply absolute left-[-6px] flex h-10 w-10 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[#252525]; }
+  .page-back svg { @apply h-[26px] w-[26px]; }
+  .signup-header .page-back { @apply bottom-2; }
+  .signup-form { @apply mt-[50px] flex flex-1 flex-col; }
+  .signup-field { @apply mb-[22px] flex flex-col gap-[7px]; }
+  .signup-field label { @apply px-px text-sm font-medium; }
+  .signup-hint { @apply m-0 px-px text-xs text-[#9e9b95]; }
   .signup-bottom { @apply mt-auto pt-8; }
-  .signup-bottom button { @apply h-12 w-full cursor-pointer rounded-[3px] border border-brand-muted bg-brand-muted text-[15px] text-white; }
-  .signup-bottom button:disabled { @apply cursor-wait opacity-80; }
-  .signup-login { @apply mt-4 text-center text-xs text-[#8f887e]; }
-  .signup-login a { @apply text-brand underline underline-offset-4; }
+  .signup-bottom .auth-submit { @apply h-12 text-[17px] font-normal; }
 }

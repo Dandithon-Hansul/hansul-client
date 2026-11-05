@@ -26,3 +26,31 @@ export function BowlIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
+/** Figma 의 얇은 "<" 뒤로가기 */
+export function BackIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15.5 4 7.5 12l8 8" />
+    </svg>
+  )
+}
+
+/** 시트 닫기 "×" */
+export function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+      <path d="M5 5l14 14M19 5 5 19" />
+    </svg>
+  )
+}
+
+/** 지역 입력칸 돋보기 */
+export function SearchIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 5 5" />
+    </svg>
+  )
+}
