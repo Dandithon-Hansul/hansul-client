@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { BackIcon, SearchIcon } from '../../components/icons'
 import RegionSheet from '../../components/region/RegionSheet'
+import { ApiError } from '../../lib/api/client'
 import { findRegionByCode, regionLabel } from '../../lib/regions'
 import { FOOD_ICONS } from './foodIcons'
 import './onboarding.css'
@@ -18,23 +19,41 @@ type Props = {
   setFavoriteFoods: (foods: string[]) => void
   step: number
   setStep: (step: number) => void
-  onComplete: () => void
+  /** 마지막 단계에서 호출 — 서버 저장이 실패하면 에러를 던짐 */
+  onComplete: () => Promise<void>
+}
+
+function errorText(error: unknown) {
+  if (error instanceof ApiError && error.status !== 0) return error.message
+  return '저장하지 못했어요. 네트워크 상태를 확인하고 다시 시도해주세요.'
 }
 
 /** [S-01] 온보딩 3단계 — Figma 최종 디자인 기준 */
 function OnboardingFlow({ name, setName, regionCode, setRegionCode, favoriteFoods, setFavoriteFoods, step, setStep, onComplete }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const region = findRegionByCode(regionCode)
 
   // 1단계: 이름 필수 / 2단계: 지역은 건너뛰기 가능 (Figma) / 3단계: 음식 1개 이상
   const canContinue = step === 0 ? Boolean(name.trim()) : step === 1 ? true : favoriteFoods.length > 0
   const isSkip = step === 1 && !region
 
-  function continueFlow(event: FormEvent<HTMLFormElement>) {
+  async function continueFlow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!canContinue) return
-    if (step < 2) setStep(step + 1)
-    else onComplete()
+    if (!canContinue || submitting) return
+    if (step < 2) {
+      setStep(step + 1)
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      await onComplete() // 성공하면 홈으로 이동하므로 이 화면은 사라짐
+    } catch (caught) {
+      setError(errorText(caught))
+      setSubmitting(false)
+    }
   }
 
   function toggleFood(food: string) {
@@ -99,8 +118,9 @@ function OnboardingFlow({ name, setName, regionCode, setRegionCode, favoriteFood
       </section>
 
       <form className="onboarding-bottom" onSubmit={continueFlow}>
-        <button type="submit" className={isSkip ? 'is-skip' : ''} disabled={!canContinue}>
-          {step === 2 ? '한술 시작하기' : isSkip ? '건너뛰기' : '다음'}
+        {error && <p className="onboarding-error" role="alert">{error}</p>}
+        <button type="submit" className={isSkip ? 'is-skip' : ''} disabled={!canContinue} aria-busy={submitting}>
+          {step === 2 ? (submitting ? '저장 중…' : '한술 시작하기') : isSkip ? '건너뛰기' : '다음'}
         </button>
       </form>
     </main>

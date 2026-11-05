@@ -28,4 +28,6 @@
   .onboarding-bottom button:disabled,
   .onboarding-bottom button.is-skip { @apply border-[#efebe4] bg-[#f8f5f0] text-[#5e5850]; }
   .onboarding-bottom button:disabled { @apply cursor-not-allowed; }
+  .onboarding-bottom button[aria-busy='true'] { @apply cursor-wait opacity-80; }
+  .onboarding-error { @apply mb-3 text-center text-xs text-terra; }
 }

@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { readMockDb } from '../../lib/mock/mockDb'
 import { currentPath, loginAsNewUser, renderApp } from '../../test/renderApp'
 
 describe('온보딩 (Figma 최종 디자인)', () => {
@@ -40,6 +41,35 @@ describe('온보딩 (Figma 최종 디자인)', () => {
     await user.click(screen.getByRole('button', { name: '다음' }))
 
     await user.click(screen.getByRole('button', { name: '한술 시작하기' }))
+    // 서버 저장이 끝난 뒤 홈으로 이동
+    expect(await screen.findByText(/오늘은 어떤 맛의 기억을/)).toBeInTheDocument()
     expect(currentPath()).toHaveTextContent(/^\/$/)
+    expect(readMockDb().profiles['mock-user-newbie']?.region?.code).toBe('47170')
+  })
+
+  it('가입 → 온보딩 완료 후 마이페이지에 들어가면 다시 온보딩으로 가지 않는다 (버그 수정 확인)', async () => {
+    const user = renderApp('/signup')
+    await user.type(await screen.findByLabelText('아이디'), 'newcook')
+    await user.type(screen.getByLabelText('비밀번호'), 'hansul123')
+    await user.type(screen.getByLabelText('비밀번호 확인'), 'hansul123')
+    await user.click(screen.getByRole('button', { name: '가입하고 시작하기' }))
+
+    await user.type(await screen.findByLabelText('어떤 이름을 사용하실 건가요?'), '새요리사')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: '건너뛰기' }))
+    await user.click(screen.getByRole('button', { name: '찜·조림' }))
+    await user.click(screen.getByRole('button', { name: '한술 시작하기' }))
+
+    // 서버(mock)에 프로필이 저장됨 — 지역은 건너뛰어서 null
+    expect(await screen.findByText(/오늘은 어떤 맛의 기억을/)).toBeInTheDocument()
+    const saved = readMockDb().profiles['mock-user-newcook']
+    expect(saved).toMatchObject({ display_name: '새요리사', region: null, food_preferences: ['찜·조림'], role: 'transmitter' })
+
+    // 홈 → 프로필: 온보딩이 아니라 마이페이지가 나와야 함
+    await user.click(screen.getByRole('button', { name: '프로필' }))
+    expect(await screen.findByText('새요리사')).toBeInTheDocument()
+    expect(screen.getByText('지역 미설정')).toBeInTheDocument()
+    expect(currentPath()).toHaveTextContent('/profile')
   })
 })
+

@@ -4,6 +4,7 @@ import './App.css'
 import { isFeaturePage, pathOf, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
+import { DEFAULT_ROLE, setupProfile } from './lib/api/profile'
 import { findRegionByCode, findRegionByText, formatRegion } from './lib/regions'
 import { useAuth } from './features/auth/auth-context'
 import LoginPage from './features/auth/LoginPage'
@@ -59,9 +60,17 @@ function App({ splashMs }: { splashMs?: number }) {
 
   const go = (destination: Destination) => navigate(pathOf(destination))
 
-  function completeOnboarding() {
+  /** "한술 시작하기": 서버에 프로필 저장 → 홈. 실패하면 에러를 던져 온보딩 화면에서 안내 */
+  async function completeOnboarding() {
+    await setupProfile({
+      display_name: name.trim(),
+      region_code: regionCode || null, // 지역 건너뛰면 null
+      food_preferences: favoriteFoods,
+      role: DEFAULT_ROLE,
+    })
+    // 홈 화면이 아직 API 대신 이 값으로 이름을 보여줘서 함께 저장 (홈 API 연결 후 제거)
     window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ name, regionCode, favoriteFoods }))
-    navigate('/')
+    navigate('/', { replace: true })
   }
 
   // 스플래시가 끝나도 저장된 로그인 세션을 읽는 중이면 계속 스플래시

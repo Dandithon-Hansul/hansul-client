@@ -4,7 +4,7 @@ import { readMockDb, writeMockDb } from '../mock/mockDb'
 import { DEMO_MY_RECIPES, DEMO_SAVED, MOCK_PUBLIC_PROFILES } from '../mock/mockRecipes'
 import { findRegionByCode, findRegionByText } from '../regions'
 import { ApiError, apiFetch } from './client'
-import type { CursorPage, MyProfile, MyRecipeItem, ProfileUpdateBody, PublicProfile, RecipeThumb, Region, SavedRecipeItem } from './types'
+import type { CursorPage, MyProfile, MyRecipeItem, ProfileSetupBody, ProfileSetupResponse, ProfileUpdateBody, PublicProfile, RecipeThumb, Region, Role, SavedRecipeItem } from './types'
 
 export const PAGE_SIZE = 18 // 3열 × 6줄
 
@@ -71,6 +71,35 @@ export async function getMyProfile(): Promise<MyProfile> {
       likes_received: raw.stats?.likes_received ?? 0,
     },
   }
+}
+
+/** 역할은 나누지 않기로 해서(팀 결정) setup 에 항상 이 값을 보냄 — 백엔드와 확정되면 여기만 수정 */
+export const DEFAULT_ROLE: Role = 'transmitter'
+
+/**
+ * POST /api/profiles/setup — 온보딩 결과를 서버에 저장 (이게 있어야 GET /api/profiles/me 가 404 가 아님)
+ * 응답의 start_route 는 쓰지 않고 화면에서 홈으로 보냄 (기능 명세서·Figma 기준)
+ */
+export async function setupProfile(body: ProfileSetupBody): Promise<ProfileSetupResponse> {
+  if (!IS_MOCK) return apiFetch<ProfileSetupResponse>('/api/profiles/setup', { method: 'POST', json: body })
+
+  await wait(MOCK_DELAY_MS)
+  const db = readMockDb()
+  const userId = mockUserId()
+  const region = body.region_code ? findRegionByCode(body.region_code) : undefined
+  if (body.region_code && !region) throw new ApiError(422, 'INVALID_REGION', '지역 코드가 올바르지 않아요.')
+  const previous = db.profiles[userId]
+  db.profiles[userId] = {
+    id: userId,
+    role: body.role,
+    display_name: body.display_name,
+    avatar_url: previous?.avatar_url ?? null,
+    region: region ? { ...region, dong: null } : null,
+    food_preferences: body.food_preferences,
+    stats: previous?.stats ?? { transmitted_recipes: 0, saved_recipes: 0, likes_received: 0 },
+  }
+  writeMockDb(db)
+  return { profile_id: userId, role: body.role, start_route: '/' }
 }
 
 /** PATCH /api/profiles/me — 프로필 편집 */

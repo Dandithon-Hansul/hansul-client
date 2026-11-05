@@ -80,3 +80,21 @@ export type PublicProfile = {
     likes_received: number
   }
 }
+
+/**
+ * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기"
+ * region_code: 지역을 건너뛰면 null (⚠️ 백엔드에서 null 허용 필요)
+ * role: 팀 결정으로 역할을 나누지 않아 기본값을 보냄
+ */
+export type ProfileSetupBody = {
+  display_name: string
+  region_code: string | null
+  food_preferences: string[]
+  role: Role
+}
+
+export type ProfileSetupResponse = {
+  profile_id: string
+  role: Role
+  start_route: string
+}
