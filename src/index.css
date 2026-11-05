@@ -1,1 +1,25 @@
-:root{font-family:Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#303b30;background:#f8f6ee;font-synthesis:none;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;scroll-behavior:smooth}*{box-sizing:border-box}body{margin:0}a{color:inherit;text-decoration:none}a:focus-visible{outline:3px solid #bc5737;outline-offset:6px}h1,h2,h3,p{margin-top:0}::selection{background:#e6bc8b}@media(prefers-reduced-motion:reduce){:root{scroll-behavior:auto}}
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --color-brand: #43543d;
+  --color-brand-deep: #344431;
+  --color-brand-muted: #50604b;
+  --color-canvas: #fffefd;
+  --color-ink: #262626;
+  --color-paper: #f7f5ed;
+  --color-terra: #b94830;
+}
+
+@layer base {
+  * { @apply box-border; }
+  html { @apply min-h-svh scroll-smooth; }
+  body { @apply m-0 min-h-svh min-w-[320px] bg-[#f0efe9] font-sans text-[#303b30] antialiased; }
+  button, input { @apply font-[inherit]; }
+  ::selection { @apply bg-[#e6bc8b]; }
+}
+
+@layer components {
+  #root { @apply min-h-svh; }
+  .app-shell { @apply mx-auto min-h-svh w-full max-w-[430px] bg-canvas shadow-[0_0_48px_#1c24150d]; }
+}
