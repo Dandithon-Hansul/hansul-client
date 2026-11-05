@@ -78,11 +78,38 @@ Node.js 24 LTS와 npm을 사용합니다. React + TypeScript + Vite 기반입니
 
 ```sh
 npm ci
+cp .env.example .env.local   # 처음 한 번
 npm run dev -- --host 0.0.0.0
 ```
 
 - `npm run build`: TypeScript 검사 및 프로덕션 빌드 (`dist/`)
 - `npm run lint`: Oxlint 정적 검사
+- `npm test`: Vitest 자동 테스트 (`npm run test:watch` 는 저장할 때마다 다시 실행)
 - `npm run preview -- --host 0.0.0.0`: 빌드 결과 확인
 
-현재 화면은 서비스 소개 페이지입니다. 별도 환경 변수나 백엔드 없이 실행되며, 음성 기록·조리법 검색·인증 기능은 아직 구현되지 않았습니다.
+### 환경 변수 (`.env.local`)
+
+| 이름 | 설명 |
+| --- | --- |
+| `VITE_USE_MOCK` | `true` 면 Supabase·백엔드 없이 브라우저 안 가짜 데이터로 실행 |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Supabase 대시보드 › Project Settings › API |
+| `VITE_AUTH_EMAIL_DOMAIN` | 아이디 → 이메일 변환용 도메인 (기본 `hansul.app`) |
+| `VITE_API_BASE_URL` | 배포된 백엔드 주소. 비우면 같은 주소의 `/api` |
+| `VITE_API_PROXY_TARGET` | 개발 중 `/api` 를 넘겨줄 로컬 백엔드 (예: `http://localhost:3000`) |
+
+### 화면 주소
+
+| 주소 | 화면 | 로그인 필요 |
+| --- | --- | --- |
+| `/login`, `/signup` | 로그인, 회원가입 | 로그인 상태면 홈(또는 온보딩)으로 이동 |
+| `/onboarding` | 온보딩 3단계 | O |
+| `/` | 홈 | O |
+| `/record` `/chat` `/recipe` `/cook` `/monthly` `/map` `/profile` | 기존 화면 | O |
+
+기존 컴포넌트의 `onNavigate('record')` 호출은 그대로 쓰면 되고, `App.tsx` 에서 주소로 바꿔 이동합니다.
+
+### 로그인 테스트
+
+**mock 모드** (`VITE_USE_MOCK=true`): 데모 계정 `hansul` / `hansul123` 은 프로필이 있어 로그인하면 홈으로, 새로 가입한 계정은 프로필이 없어 온보딩으로 갑니다. 가짜 데이터 초기화는 개발자 도구 콘솔에서 `localStorage.removeItem('hansul.mock.db')`.
+
+**실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 백엔드 `/api/profiles/me` 가 아직 없으면 로그인 후 홈으로 갑니다.
