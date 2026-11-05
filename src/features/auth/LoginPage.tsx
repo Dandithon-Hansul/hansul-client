@@ -6,7 +6,7 @@ import './auth.css'
 /**
  * [로그인] Figma 최종 디자인 기준
  * 성공하면 화면 이동은 PublicOnly 가드가 맡음 (프로필 없으면 온보딩, 있으면 원래 가려던 곳)
- * Figma 에는 회원가입으로 가는 버튼이 없어서 아래에 작은 링크로 둠 (디자이너 확인 필요)
+ * 로그인 버튼 아래 '회원가입' 글자 링크 (Figma 최종)
  */
 function LoginPage() {
   const { signIn } = useAuth()
