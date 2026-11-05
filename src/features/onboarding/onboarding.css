@@ -1,0 +1,39 @@
+@reference "../../index.css";
+
+@layer components {
+  .onboarding-flow { @apply relative min-h-svh bg-canvas px-[27px] pb-[calc(env(safe-area-inset-bottom)+105px)] pt-[124px] text-ink; }
+  .onboarding-progress { @apply absolute left-[21px] right-[21px] top-[65px] flex gap-[6px]; }
+  .onboarding-progress span { @apply h-0.5 flex-1 bg-[#ded7ca]; }
+  .onboarding-progress span.active { @apply bg-[#c64c32]; }
+  .onboarding-progress span.complete { @apply bg-brand-muted; }
+  .onboarding-back { @apply absolute left-[14px] top-20 h-8 w-8 cursor-pointer border-0 bg-transparent p-0 text-[30px] leading-6 text-[#777168]; }
+  .onboarding-content h1 { @apply m-0 font-serif text-[22px] font-bold leading-[1.34] tracking-[-.8px]; }
+  .onboarding-subtitle { @apply mb-[75px] mt-[13px] text-xs text-[#777168]; }
+  .onboarding-question { @apply mb-[19px] block text-sm text-[#5e5850]; }
+  .onboarding-input { @apply flex h-[49px] w-full items-center gap-2.5 rounded-[3px] border border-[#ded7ca] bg-white px-[15px] text-left text-[13px] text-[#5e5850] outline-none; }
+  .onboarding-input::placeholder { @apply text-[#888278]; }
+  .onboarding-input:focus { @apply border-[#9d9a8c]; }
+  .region-input { @apply cursor-pointer; }
+  .region-input span { @apply text-xl leading-none text-[#777168]; }
+  .food-choice-grid { @apply grid grid-cols-3 gap-[7px]; }
+  .food-choice { @apply flex h-[100px] cursor-pointer flex-col items-center justify-center gap-[6px] rounded-[3px] border border-[#ded7ca] bg-white px-[3px] py-2 text-[11px] text-[#5e5850]; }
+  .food-choice svg { @apply h-[25px] w-[25px]; fill: #d7d0c2; stroke: #d7d0c2; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .food-choice.selected { @apply border-brand-muted bg-[#e6eadf] text-brand; }
+  .food-choice.selected svg { @apply fill-brand-muted stroke-brand-muted; }
+  .onboarding-bottom { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+30px)] left-1/2 z-[2] w-[min(calc(100%-42px),360px)] -translate-x-1/2; }
+  .onboarding-bottom button { @apply h-12 w-full cursor-pointer rounded-[3px] border border-brand-muted bg-brand-muted text-[15px] text-white; }
+  .onboarding-bottom button:disabled { @apply cursor-not-allowed border-[#ded7ca] bg-white text-[#8f887e]; }
+  .region-overlay { @apply fixed inset-0 z-[5] flex items-end justify-center bg-black/40; }
+  .region-sheet { @apply relative flex max-h-[78svh] w-full max-w-[430px] flex-col rounded-t-[18px] bg-canvas px-[21px] pb-[calc(env(safe-area-inset-bottom)+23px)] pt-[13px] shadow-[0_-8px_36px_#201b121c]; }
+  .sheet-handle { @apply mx-auto mb-[18px] h-1 w-[43px] rounded bg-[#dad5cc]; }
+  .sheet-close { @apply absolute right-[17px] top-3 h-[30px] w-[30px] cursor-pointer border-0 bg-transparent text-[23px] text-[#817b72]; }
+  .region-sheet h2 { @apply mb-[19px] mt-[3px] font-serif text-lg; }
+  .region-tabs { @apply mb-[13px] flex gap-2; }
+  .region-tabs button { @apply h-[41px] flex-1 rounded-[3px] border border-[#e2ddd5] bg-white text-xs text-[#68645d]; }
+  .region-tabs button.selected { @apply border-brand-muted bg-[#dfe5db] text-brand; }
+  .district-list { @apply grid grid-cols-3 gap-[7px] overflow-auto px-0 pb-[15px] pt-0.5; }
+  .district-list button { @apply min-h-[38px] rounded-[3px] border border-[#eeeae4] bg-white text-xs text-[#666159]; }
+  .district-list button.selected { @apply border-brand-muted bg-brand-muted text-white; }
+  .sheet-confirm { @apply mt-auto h-[47px] rounded-[3px] border-0 bg-brand-muted text-sm text-white; }
+  .sheet-confirm:disabled { @apply bg-[#d9d6ce] text-[#96928a]; }
+}

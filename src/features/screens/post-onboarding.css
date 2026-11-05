@@ -1,0 +1,89 @@
+@reference "../../index.css";
+
+@layer components {
+  .feature-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+28px)] pt-[calc(env(safe-area-inset-top)+68px)] text-ink; }
+  .feature-header { @apply absolute left-[22px] right-[22px] grid h-11 grid-cols-[40px_1fr_40px] items-center border-b border-[#eeeae4]; top: calc(env(safe-area-inset-top) + 55px); }
+  .feature-header>button { @apply h-[38px] w-[38px] border-0 bg-transparent text-left text-[30px] text-[#585149]; }
+  .feature-header h1 { @apply m-0 text-center font-serif text-[15px] font-bold; }
+  .record-view { @apply pt-[118px] text-center; }
+  .feature-kicker { @apply mb-2.5 text-xs font-semibold tracking-[.5px] text-terra; }
+  .record-view h2,.map-intro h2,.recipe-detail-content h2,.cook-page h2,.profile-summary h2 { @apply m-0 font-serif text-2xl leading-[1.5]; white-space: pre-line; }
+  .feature-muted { @apply text-xs leading-[1.7] text-[#8e8a82]; }
+  .record-orb { @apply mx-auto mt-[52px] mb-[17px] grid h-[104px] w-[104px] cursor-pointer place-items-center rounded-full border-[8px] border-[#f8ece8] bg-[#b74731] text-white shadow-[0_0_0_2px_#fff,0_0_0_3px_#f1d8d0]; }
+  .record-orb svg { @apply h-[34px] w-[34px]; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .record-orb.is-recording { animation: pulse 1.2s ease-in-out infinite; }
+  .record-status { @apply min-h-[18px] text-[11px] text-[#9a938b]; }
+  .photo-upload { @apply mt-11 block w-full cursor-pointer border border-[#eae5dc] p-[14px] text-xs text-[#605c55]; }
+  .photo-upload input { @apply hidden; }
+  .feature-primary { @apply mt-5 flex min-h-12 w-full cursor-pointer items-center justify-between rounded-[3px] border-0 bg-brand-muted px-4 text-left text-[13px] font-semibold text-white; }
+  .feature-primary span { @apply text-[19px]; }
+  .chat-page { @apply flex flex-col pb-[calc(env(safe-area-inset-bottom)+174px)]; }
+  .chat-context { @apply pt-4; }
+  .chat-context>span { @apply text-[11px] text-terra; }
+  .chat-context h2 { @apply my-[7px] mb-[18px] font-serif text-xl leading-[1.4]; }
+  .chat-messages { @apply flex flex-col gap-[14px] overflow-auto; }
+  .chat-bubble { @apply flex max-w-[90%] items-start gap-2; }
+  .chat-bubble img { @apply mt-[3px] h-[23px] w-[25px] object-contain; }
+  .chat-bubble p { @apply m-0 rounded-[10px] bg-[#f3f0e8] p-3 text-xs leading-[1.6] text-[#514e48]; }
+  .chat-bubble.user { @apply self-end; }
+  .chat-bubble.user p { @apply bg-[#dfe5db]; }
+  .answer-options { @apply my-[14px] flex flex-wrap gap-[7px]; }
+  .answer-options button { @apply cursor-pointer rounded-[18px] border border-[#e4e0d7] bg-white px-3 py-[9px] text-[11px] text-[#5b5e55]; }
+  .chat-compose { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] left-1/2 flex h-11 w-[min(calc(100%-44px),386px)] -translate-x-1/2 items-center gap-2 border border-[#e5e0d8] bg-white px-2.5; }
+  .chat-compose input { @apply min-w-0 flex-1 border-0 text-xs outline-none; }
+  .chat-compose button { @apply cursor-pointer border-0 bg-transparent text-lg text-terra; }
+  .chat-next { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 w-[min(calc(100%-44px),386px)] -translate-x-1/2; }
+  .recipe-page { @apply px-0 pt-[calc(env(safe-area-inset-top)+104px)]; }
+  .recipe-page .feature-header { @apply left-[22px] right-[22px]; }
+  .recipe-detail-image { @apply block h-[260px] w-full object-cover; }
+  .recipe-detail-content { @apply px-[22px] py-6; }
+  .recipe-detail-content h2 { @apply text-[27px]; }
+  .recipe-detail-content>p:not(.feature-kicker) { @apply text-xs leading-[1.7] text-[#77736b]; }
+  .recipe-stats { @apply my-[18px] mb-[30px] flex gap-[18px] border-y border-[#eeeae4] py-[13px] text-[11px] text-[#79756d]; }
+  .recipe-detail-content h3 { @apply font-serif text-base; }
+  .cook-page { @apply pt-[calc(env(safe-area-inset-top)+112px)]; }
+  .cook-progress { @apply mb-[30px] h-[3px] bg-[#ede9e3]; }
+  .cook-progress span { @apply block h-full bg-[#c44b31] transition-[width] duration-200; }
+  .cook-page h2 { @apply mb-4 text-[22px]; }
+  .cook-image { @apply h-[230px] w-full rounded-lg object-cover; }
+  .cook-description { @apply my-5 text-sm leading-[1.8]; }
+  .cook-ai-tip { @apply bg-[#f2eee5] p-4 text-xs leading-[1.8] text-[#827a6d]; }
+  .cook-ai-tip span { @apply text-[#5e5b54]; }
+  .cook-controls { @apply mt-[22px] flex gap-[9px]; }
+  .cook-controls>button:first-child:not(.feature-primary) { @apply min-h-12 w-[34%] border border-[#ded9d0] bg-white text-[#6f6b64]; }
+  .cook-controls .feature-primary { @apply mt-0; }
+  .food-list { @apply flex flex-col gap-[13px] pt-[30px]; }
+  .food-list-card { @apply grid w-full grid-cols-[88px_1fr_20px] items-center gap-3 rounded-lg border border-[#f0ede7] bg-white p-2 text-left; }
+  .food-list-card img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }
+  .food-list-card span:nth-child(2) { @apply flex flex-col gap-[6px]; }
+  .food-list-card b { @apply text-xs; }
+  .food-list-card small { @apply text-[10px] text-[#8c877e]; }
+  .food-list-card span:last-child { @apply text-[22px] text-[#807a71]; }
+  .map-intro { @apply pt-9; }
+  .region-switch { @apply my-6 flex gap-2; }
+  .region-switch button { @apply h-[42px] flex-1 border border-[#e5e1d8] bg-white text-xs text-[#6b6b63]; }
+  .region-switch button.selected { @apply border-brand-muted bg-[#dfe5db] text-[#3e503a]; }
+  .map-illustration { @apply grid h-[390px] place-items-center overflow-hidden rounded-xl bg-[#ecf0e8]; }
+  .map-region { @apply flex h-[280px] w-[220px] flex-col items-center justify-center gap-[18px] bg-[#d7e7c9] text-[15px] font-bold text-[#4d6346]; clip-path: polygon(27% 0,74% 5%,93% 21%,83% 41%,100% 59%,77% 76%,71% 97%,42% 88%,19% 97%,23% 71%,0 52%,16% 34%,6% 15%); }
+  .map-region span { @apply rounded-[14px] bg-white px-2.5 py-1.5 text-[10px]; }
+  .map-region b,.map-region small { @apply rounded-[14px] bg-[#bc5038] px-[9px] py-1.5 text-[10px] text-white; }
+  .map-region small { @apply bg-white text-[#5c6957]; }
+  .profile-summary { @apply flex flex-col items-center px-0 pt-[45px] pb-7 text-center; }
+  .profile-avatar { @apply grid h-[82px] w-[82px] place-items-center rounded-full bg-[#dfe5db] text-[29px] text-[#64745e]; }
+  .profile-summary h2 { @apply mt-[13px] text-xl; }
+  .profile-summary p { @apply mt-[7px] text-[11px] text-[#858177]; }
+  .profile-stats { @apply flex justify-around border-y border-[#ece8e0] px-1 py-[18px]; }
+  .profile-stats span { @apply flex flex-col items-center gap-[5px] text-[10px] text-[#8b867d]; }
+  .profile-stats b { @apply text-[17px] text-[#393b35]; }
+  .profile-tabs { @apply mt-7 flex gap-[22px] border-b border-[#ece8e0]; }
+  .profile-tabs button { @apply border-0 border-b-2 border-brand-muted bg-transparent px-1 py-3 text-xs text-[#4e5849]; }
+  .profile-foods { @apply mt-[18px] flex flex-wrap items-center gap-[7px] text-[11px] text-[#89847b]; }
+  .profile-foods span { @apply rounded-[14px] bg-[#f1f0e8] px-[9px] py-1.5 text-[#5a6354]; }
+}
+
+@keyframes pulse { 50% { box-shadow: 0 0 0 8px #f3d9d0, 0 0 0 16px #f9ede9; } }
+
+@media (min-width: 431px) {
+  .feature-header { left: calc(50% - 193px); right: calc(50% - 193px); }
+  .chat-compose,.chat-next { left: 50%; }
+}
