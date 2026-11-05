@@ -2,16 +2,16 @@
 
 /* 로그인 화면은 App.css 의 .login-card 스타일을 그대로 쓰고, 추가된 요소만 여기서 정의 */
 @layer components {
-  .auth-error { @apply m-0 min-h-[16px] px-0.5 text-[10px] leading-[16px] text-terra; }
+  .auth-error { @apply m-0 min-h-[18px] px-0.5 text-xs leading-[18px] text-terra; }
   .auth-error.center { @apply mb-2 text-center text-xs; }
-  .auth-notice { @apply mt-2 text-center text-[10px] text-[#8f887e]; }
+  .auth-notice { @apply mt-3 text-center text-xs text-[#8f887e]; }
   .login-card .primary-button:disabled { @apply cursor-wait opacity-80; }
   .login-card input[aria-invalid='true'] { @apply border-terra; }
 
-  .auth-links { @apply mt-2 flex items-center justify-center gap-2 text-[9px] text-[#6f716f]; }
+  .auth-links { @apply mt-4 flex items-center justify-center gap-3 text-xs text-[#6f716f]; }
   .auth-links button, .auth-links a { @apply cursor-pointer border-0 bg-transparent p-0 text-inherit no-underline; }
   .auth-links button:hover, .auth-links a:hover { @apply underline; }
-  .auth-links span { @apply h-2 w-px bg-[#ded7ca]; }
+  .auth-links span { @apply h-3 w-px bg-[#ded7ca]; }
 
   /* 회원가입: 온보딩 화면(onboarding.css)과 같은 톤 */
   .signup-page { @apply relative flex min-h-svh flex-col bg-canvas px-[27px] pb-[calc(env(safe-area-inset-bottom)+30px)] pt-[124px] text-ink; }

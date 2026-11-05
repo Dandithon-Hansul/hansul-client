@@ -23,13 +23,13 @@
   .primary-button span { @apply text-xl; }
   .login-card { @apply w-full max-w-[430px] border-0 bg-transparent p-0 shadow-none; }
   .login-brand { @apply flex flex-col items-center text-[#4b5c43]; }
-  .login-mark { @apply block h-[53px] w-[58px] object-contain; }
-  .login-brand span { @apply mt-px text-base leading-[1.2]; }
-  .login-tagline { @apply mb-5 mt-[13px] text-center font-serif text-[11px] tracking-[.15px] text-[#aaa398]; }
-  .login-card form { @apply gap-[5px]; }
-  .login-card input { @apply h-[38px] rounded-sm border-[#e7e1d8] px-[11px] text-[11px]; }
+  .login-mark { @apply block h-[72px] w-[78px] object-contain; }
+  .login-brand span { @apply mt-0.5 text-[22px] leading-[1.2]; }
+  .login-tagline { @apply mb-7 mt-4 text-center font-serif text-[13px] tracking-[.15px] text-[#aaa398]; }
+  .login-card form { @apply gap-[7px]; }
+  .login-card input { @apply h-[52px] rounded-sm border-[#e7e1d8] px-[15px] text-base; }
   .login-card input::placeholder { @apply text-[#b8b3aa]; }
-  .login-card .login-button { @apply mt-[17px] h-[38px] justify-center rounded-sm p-0 text-[11px]; }
+  .login-card .login-button { @apply mt-[10px] h-[52px] justify-center rounded-sm p-0 text-[15px]; }
   .signup-link { @apply mx-auto mt-2 block cursor-pointer border-0 bg-transparent px-2.5 py-[3px] text-[9px] text-[#6f716f]; }
   .signup-link:hover { @apply underline; }
   .account-email { @apply mb-0 mt-[23px] text-center text-xs leading-[1.6] text-[#92958b]; }
