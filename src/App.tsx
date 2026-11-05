@@ -3,7 +3,7 @@ import './App.css'
 function App() {
   return (
     <main>
-      <header><a className="brand" href="#">한술<span>HANSUL</span></a><a href="#about">한술 소개 ↗</a></header>
+      <header><a className="brand brand-link" href="#" aria-label="한술 홈"><img className="brand-logo" src="/logo.svg" alt="한술" /><span>HANSUL</span></a><a href="#about">한술 소개 ↗</a></header>
       <section className="hero" aria-labelledby="title">
         <p className="eyebrow">대구 · 경북의 맛을 잇다</p>
         <h1 id="title">한 술에 담긴 맛,<br />한 세대를 잇는 이야기.</h1>
@@ -22,7 +22,7 @@ function App() {
         </div>
         <p className="notice">한술은 지금 준비 중입니다. 음성 기록과 조리법 탐색 기능은 추후 제공됩니다.</p>
       </section>
-      <footer><span className="brand">한술</span><p>우리의 맛이 오래도록 이어지도록.</p></footer>
+      <footer><img className="footer-logo" src="/logo.svg" alt="한술" /><p>우리의 맛이 오래도록 이어지도록.</p></footer>
     </main>
   )
 }
