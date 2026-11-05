@@ -79,7 +79,6 @@
   .profile-tabs button { @apply border-0 border-b-2 border-brand-muted bg-transparent px-1 py-3 text-xs text-[#4e5849]; }
   .profile-foods { @apply mt-[18px] flex flex-wrap items-center gap-[7px] text-[11px] text-[#89847b]; }
   .profile-foods span { @apply rounded-[14px] bg-[#f1f0e8] px-[9px] py-1.5 text-[#5a6354]; }
-  .profile-logout { @apply mx-auto mt-5 block cursor-pointer border-0 bg-transparent text-[11px] text-[#89847b] underline underline-offset-4; }
 }
 
 @keyframes pulse { 50% { box-shadow: 0 0 0 8px #f3d9d0, 0 0 0 16px #f9ede9; } }

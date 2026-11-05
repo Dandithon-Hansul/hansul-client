@@ -3,7 +3,7 @@ import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
 
-type Props = { page: FeaturePage; name: string; region: string; favoriteFoods: string[]; onNavigate: (page: 'home' | FeaturePage) => void; onLogout?: () => void }
+type Props = { page: FeaturePage; name: string; region: string; favoriteFoods: string[]; onNavigate: (page: 'home' | FeaturePage) => void }
 
 const cookingSteps = [
   { title: '재료 손질하기', body: '소고기는 키친타월로 핏물을 닦고, 무와 대파는 먹기 좋은 크기로 썰어주세요.' },
@@ -16,7 +16,7 @@ function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return <header className="feature-header"><button type="button" onClick={onBack} aria-label="뒤로">‹</button><h1>{title}</h1><span /></header>
 }
 
-function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate, onLogout }: Props) {
+function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }: Props) {
   const [recording, setRecording] = useState(false)
   const [chatIndex, setChatIndex] = useState(0)
   const [draft, setDraft] = useState('')
@@ -100,7 +100,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate, 
   )
 
   return (
-    <main className="feature-page"><PageHeader title="마이페이지" onBack={() => onNavigate('home')} /><div className="profile-summary"><div className="profile-avatar">{(name || '한술').slice(0, 1)}</div><h2>{name || '한술'}님</h2><p>{region || '지역 미설정'} · 음식 이야기 기록자</p></div><div className="profile-stats"><span><b>2</b>전승 레시피</span><span><b>8</b>저장한 맛</span><span><b>34</b>받은 좋아요</span></div><div className="profile-tabs"><button type="button">나의 레시피</button><button type="button">저장한 맛</button></div><div className="profile-foods">관심 음식 {favoriteFoods.map((food) => <span key={food}>{food}</span>)}</div><button className="feature-primary" type="button" onClick={() => onNavigate('record')}>우리 집 음식 기록하기 <span>→</span></button>{onLogout && <button className="profile-logout" type="button" onClick={onLogout}>로그아웃</button>}</main>
+    <main className="feature-page"><PageHeader title="마이페이지" onBack={() => onNavigate('home')} /><div className="profile-summary"><div className="profile-avatar">{(name || '한술').slice(0, 1)}</div><h2>{name || '한술'}님</h2><p>{region || '지역 미설정'} · 음식 이야기 기록자</p></div><div className="profile-stats"><span><b>2</b>전승 레시피</span><span><b>8</b>저장한 맛</span><span><b>34</b>받은 좋아요</span></div><div className="profile-tabs"><button type="button">나의 레시피</button><button type="button">저장한 맛</button></div><div className="profile-foods">관심 음식 {favoriteFoods.map((food) => <span key={food}>{food}</span>)}</div><button className="feature-primary" type="button" onClick={() => onNavigate('record')}>우리 집 음식 기록하기 <span>→</span></button></main>
   )
 }
 

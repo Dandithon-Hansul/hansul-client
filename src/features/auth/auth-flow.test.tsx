@@ -1,39 +1,7 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { MemoryRouter, useLocation } from 'react-router'
+import { screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import App from '../../App'
-import { DEMO_ACCOUNT, readMockDb, writeMockDb } from '../../lib/mock/mockDb'
-import AuthProvider from './AuthProvider'
-
-/** 현재 주소를 화면에 찍어서 "어디로 이동했는지" 검사 */
-function CurrentPath() {
-  const location = useLocation()
-  return <output data-testid="path">{location.pathname}</output>
-}
-
-/** 실제 앱과 똑같이 조립하되, 주소를 마음대로 정하고 스플래시는 끔 (mock 모드) */
-function renderApp(path: string) {
-  render(
-    <MemoryRouter initialEntries={[path]}>
-      <AuthProvider>
-        <App splashMs={0} />
-        <CurrentPath />
-      </AuthProvider>
-    </MemoryRouter>,
-  )
-  return userEvent.setup()
-}
-
-const path = () => screen.getByTestId('path')
-
-/** 데모 계정으로 로그인된 상태를 미리 만들어 둠 */
-function loginAsDemo() {
-  const db = readMockDb()
-  const account = db.accounts[0]
-  db.session = { userId: account.userId, loginId: account.loginId, accessToken: 'mock-token' }
-  writeMockDb(db)
-}
+import { DEMO_ACCOUNT, readMockDb } from '../../lib/mock/mockDb'
+import { currentPath as path, loginAsDemo, renderApp } from '../../test/renderApp'
 
 describe('로그인 가드', () => {
   it('로그인 안 하고 /profile 에 가면 로그인 화면으로 보낸다', async () => {
@@ -83,9 +51,9 @@ describe('로그인', () => {
     expect(path()).toHaveTextContent('/profile')
   })
 
-  it('로그아웃하면 다시 로그인 화면으로 간다', async () => {
+  it('로그아웃하면 다시 로그인 화면으로 간다 (프로필 편집 화면 하단)', async () => {
     loginAsDemo()
-    const user = renderApp('/profile')
+    const user = renderApp('/profile/edit')
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
     expect(await screen.findByPlaceholderText('아이디 입력')).toBeInTheDocument()
     expect(readMockDb().session).toBeNull()

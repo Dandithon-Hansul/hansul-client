@@ -9,6 +9,9 @@ import LoginPage from './features/auth/LoginPage'
 import { PublicOnly, RequireAuth } from './features/auth/RouteGuards'
 import SignupPage from './features/auth/SignupPage'
 import HomeScreen from './features/home/HomeScreen'
+import ProfileEditPage from './features/profile/ProfileEditPage'
+import ProfilePage from './features/profile/ProfilePage'
+import UserProfilePage from './features/profile/UserProfilePage'
 import OnboardingFlow from './features/onboarding/OnboardingFlow'
 import PostOnboardingScreens from './features/screens/PostOnboardingScreens'
 
@@ -82,8 +85,12 @@ function App({ splashMs }: { splashMs?: number }) {
             element={<OnboardingRoute name={name} setName={setName} region={region} setRegion={setRegion} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} onExit={logout} />}
           />
           <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
+          {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/profile/edit" element={<ProfileEditPage />} />
+          <Route path="/users/:id" element={<UserProfilePage />} />
           {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
-          <Route path="/:page" element={<FeatureRoute name={name} region={region} favoriteFoods={favoriteFoods} onNavigate={go} onLogout={logout} />} />
+          <Route path="/:page" element={<FeatureRoute name={name} region={region} favoriteFoods={favoriteFoods} onNavigate={go} />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
