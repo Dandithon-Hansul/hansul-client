@@ -1,11 +1,9 @@
 import { useState, type FormEvent } from 'react'
+import RegionSheet from '../../components/region/RegionSheet'
+import { findRegionByText, formatRegion } from '../../lib/regions'
 import './onboarding.css'
 
 const foodChoices = ['탕·찌개·전골', '구이', '찜·조림', '볶음', '전·나물·무침', '기타']
-const districts: Record<string, string[]> = {
-  대구광역시: ['중구', '동구', '서구', '남구', '북구', '수성구', '달서구', '달성군', '군위군'],
-  경상북도: ['포항시', '경주시', '김천시', '안동시', '구미시', '영주시', '영천시', '상주시', '문경시', '경산시', '의성군', '청송군', '영양군', '영덕군', '청도군', '고령군', '성주군', '칠곡군', '예천군', '봉화군', '울진군', '울릉군'],
-}
 
 type Props = {
   name: string
@@ -22,8 +20,6 @@ type Props = {
 
 function OnboardingFlow({ name, setName, region, setRegion, favoriteFoods, setFavoriteFoods, step, setStep, onComplete, onExit }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [regionTab, setRegionTab] = useState('대구광역시')
-  const [district, setDistrict] = useState('')
 
   const canContinue = step === 0 ? Boolean(name.trim()) : step === 1 ? true : favoriteFoods.length > 0
   const prompts = ['어떤 이름을 사용하실 건가요?', '어느 지역에 거주하시나요?', '어떤 음식을 좋아하시나요? (최대 2개)']
@@ -33,12 +29,6 @@ function OnboardingFlow({ name, setName, region, setRegion, favoriteFoods, setFa
     if (!canContinue) return
     if (step < 2) setStep(step + 1)
     else onComplete()
-  }
-
-  function chooseDistrict() {
-    if (!district) return
-    setRegion(`${regionTab} · ${district}`)
-    setSheetOpen(false)
   }
 
   function toggleFood(food: string) {
@@ -64,16 +54,7 @@ function OnboardingFlow({ name, setName, region, setRegion, favoriteFoods, setFa
             <button className={`onboarding-input region-input ${region ? 'has-value' : ''}`} type="button" onClick={() => setSheetOpen(true)}>
               <span aria-hidden="true">⌕</span>{region || '지역을 설정해주세요.'}
             </button>
-            {sheetOpen && <div className="region-overlay" role="presentation" onClick={() => setSheetOpen(false)}>
-              <section className="region-sheet" role="dialog" aria-modal="true" aria-labelledby="region-title" onClick={(event) => event.stopPropagation()}>
-                <div className="sheet-handle" />
-                <button className="sheet-close" type="button" onClick={() => setSheetOpen(false)} aria-label="닫기">×</button>
-                <h2 id="region-title">거주 지역을 선택해주세요</h2>
-                <div className="region-tabs">{Object.keys(districts).map((item) => <button type="button" className={regionTab === item ? 'selected' : ''} key={item} onClick={() => { setRegionTab(item); setDistrict('') }}>{item}</button>)}</div>
-                <div className="district-list">{districts[regionTab].map((item) => <button type="button" className={district === item ? 'selected' : ''} key={item} onClick={() => setDistrict(item)}>{item}</button>)}</div>
-                <button className="sheet-confirm" type="button" disabled={!district} onClick={chooseDistrict}>선택완료</button>
-              </section>
-            </div>}
+            {sheetOpen && <RegionSheet value={findRegionByText(region)?.code ?? null} onClose={() => setSheetOpen(false)} onConfirm={(selected) => { setRegion(formatRegion(selected)); setSheetOpen(false) }} />}
           </>
         )}
 

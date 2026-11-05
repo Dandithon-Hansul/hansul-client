@@ -1,0 +1,18 @@
+@reference "../../index.css";
+
+/* OnboardingFlow 에 있던 지역 선택 시트 스타일을 그대로 옮김 */
+@layer components {
+  .region-overlay { @apply fixed inset-0 z-[5] flex items-end justify-center bg-black/40; }
+  .region-sheet { @apply relative flex max-h-[78svh] w-full max-w-[430px] flex-col rounded-t-[18px] bg-canvas px-[21px] pb-[calc(env(safe-area-inset-bottom)+23px)] pt-[13px] shadow-[0_-8px_36px_#201b121c]; }
+  .sheet-handle { @apply mx-auto mb-[18px] h-1 w-[43px] rounded bg-[#dad5cc]; }
+  .sheet-close { @apply absolute right-[17px] top-3 h-[30px] w-[30px] cursor-pointer border-0 bg-transparent text-[23px] text-[#817b72]; }
+  .region-sheet h2 { @apply mb-[19px] mt-[3px] font-serif text-lg; }
+  .region-tabs { @apply mb-[13px] flex gap-2; }
+  .region-tabs button { @apply h-[41px] flex-1 rounded-[3px] border border-[#e2ddd5] bg-white text-xs text-[#68645d]; }
+  .region-tabs button.selected { @apply border-brand-muted bg-[#dfe5db] text-brand; }
+  .district-list { @apply grid grid-cols-3 gap-[7px] overflow-auto px-0 pb-[15px] pt-0.5; }
+  .district-list button { @apply min-h-[38px] rounded-[3px] border border-[#eeeae4] bg-white text-xs text-[#666159]; }
+  .district-list button.selected { @apply border-brand-muted bg-brand-muted text-white; }
+  .sheet-confirm { @apply mt-auto h-[47px] rounded-[3px] border-0 bg-brand-muted text-sm text-white; }
+  .sheet-confirm:disabled { @apply bg-[#d9d6ce] text-[#96928a]; }
+}
