@@ -104,7 +104,10 @@ npm run dev -- --host 0.0.0.0
 | `/login`, `/signup` | 로그인, 회원가입 | 로그인 상태면 홈(또는 온보딩)으로 이동 |
 | `/onboarding` | 온보딩 3단계 | O |
 | `/` | 홈 | O |
-| `/record` `/chat` `/recipe` `/cook` `/monthly` `/map` `/profile` | 기존 화면 | O |
+| `/profile` (`?tab=saved`) | 마이페이지 (나의 레시피 / 저장한 맛) | O |
+| `/profile/edit` | 프로필 편집 (사진·이름·거주지역, 로그아웃) | O |
+| `/users/:id` | 다른 사용자(전승자) 프로필 — mock 예시 `/users/u-kim-hansul` | O |
+| `/record` `/chat` `/recipe` `/cook` `/monthly` `/map` | 기존 화면 | O |
 
 기존 컴포넌트의 `onNavigate('record')` 호출은 그대로 쓰면 되고, `App.tsx` 에서 주소로 바꿔 이동합니다.
 
@@ -113,3 +116,9 @@ npm run dev -- --host 0.0.0.0
 **mock 모드** (`VITE_USE_MOCK=true`): 데모 계정 `hansul` / `hansul123` 은 프로필이 있어 로그인하면 홈으로, 새로 가입한 계정은 프로필이 없어 온보딩으로 갑니다. 가짜 데이터 초기화는 개발자 도구 콘솔에서 `localStorage.removeItem('hansul.mock.db')`.
 
 **실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 백엔드 `/api/profiles/me` 가 아직 없으면 로그인 후 홈으로 갑니다.
+
+### 백엔드에 요청할 것 (프로필)
+
+- `GET /api/profiles/:id`, `GET /api/profiles/:id/recipes` — 다른 사용자 프로필 (명세서에 없음), 소개글 `bio` 컬럼
+- 프로필 사진: Supabase Storage `avatars` 공개 버킷 + 본인 폴더(`{user_id}/`)만 업로드 허용 정책. 프론트가 직접 올리고 주소를 `PATCH /api/profiles/me` 의 `avatar_url` 로 보냄
+- 거주지역은 `region_code`(행정코드 5자리, 예: 안동시 `47170`)로 보냄 — 목록은 `src/lib/regions.ts`
