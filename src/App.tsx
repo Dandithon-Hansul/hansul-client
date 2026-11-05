@@ -5,10 +5,11 @@ import { isFeaturePage, pathOf, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
 import { DEFAULT_ROLE, setupProfile } from './lib/api/profile'
+import { markProfileReady } from './lib/api/profileStatus'
 import { findRegionByCode, findRegionByText, formatRegion } from './lib/regions'
 import { useAuth } from './features/auth/auth-context'
 import LoginPage from './features/auth/LoginPage'
-import { PublicOnly, RequireAuth } from './features/auth/RouteGuards'
+import { PublicOnly, RequireAuth, RequireProfile } from './features/auth/RouteGuards'
 import SignupPage from './features/auth/SignupPage'
 import HomeScreen from './features/home/HomeScreen'
 import ProfileEditPage from './features/profile/ProfileEditPage'
@@ -51,7 +52,7 @@ function FeatureRoute(props: FeatureRouteProps) {
 
 function App({ splashMs }: { splashMs?: number }) {
   const navigate = useNavigate()
-  const { status } = useAuth()
+  const { status, session } = useAuth()
   const showSplash = useSplash(splashMs)
   const [initial] = useState(loadOnboarding)
   const [name, setName] = useState(initial.name)
@@ -68,6 +69,7 @@ function App({ splashMs }: { splashMs?: number }) {
       food_preferences: favoriteFoods,
       role: DEFAULT_ROLE,
     })
+    markProfileReady(session?.userId) // 이제 프로필이 있으니 홈 등에 들어갈 수 있음
     // 홈 화면이 아직 API 대신 이 값으로 이름을 보여줘서 함께 저장 (홈 API 연결 후 제거)
     window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ name, regionCode, favoriteFoods }))
     navigate('/', { replace: true })
@@ -91,13 +93,16 @@ function App({ splashMs }: { splashMs?: number }) {
             path="/onboarding"
             element={<OnboardingRoute name={name} setName={setName} regionCode={regionCode} setRegionCode={setRegionCode} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} />}
           />
-          <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
-          {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/profile/edit" element={<ProfileEditPage />} />
-          <Route path="/users/:id" element={<UserProfilePage />} />
-          {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
-          <Route path="/:page" element={<FeatureRoute name={name} region={regionCode ? formatRegion(findRegionByCode(regionCode)) : ''} favoriteFoods={favoriteFoods} onNavigate={go} />} />
+          {/* 온보딩을 끝내서 서버에 프로필이 있어야 들어갈 수 있는 화면 */}
+          <Route element={<RequireProfile />}>
+            <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
+            {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/edit" element={<ProfileEditPage />} />
+            <Route path="/users/:id" element={<UserProfilePage />} />
+            {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
+            <Route path="/:page" element={<FeatureRoute name={name} region={regionCode ? formatRegion(findRegionByCode(regionCode)) : ''} favoriteFoods={favoriteFoods} onNavigate={go} />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

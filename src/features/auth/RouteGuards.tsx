@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router'
 import { ApiError } from '../../lib/api/client'
 import { getMyProfile } from '../../lib/api/profile'
+import { isProfileConfirmed, markProfileReady } from '../../lib/api/profileStatus'
 import { useAuth } from './auth-context'
 
 type FromState = { from?: string } | null
@@ -28,6 +29,39 @@ export function RequireAuth() {
 }
 
 /**
+ * 로그인은 했지만 서버에 프로필이 없는 사람(온보딩을 안 끝낸 사람)은 온보딩으로.
+ * 홈·마이페이지 등 온보딩 이후 화면을 감쌈. 한 번 확인되면 기억해서 다시 묻지 않음.
+ * 예) 가입 후 온보딩 도중 앱을 껐다가 다시 열면 → 로그인은 유지돼 있지만 프로필이 없음 → 온보딩으로
+ */
+export function RequireProfile() {
+  const { session } = useAuth()
+  const userId = session?.userId
+  const [state, setState] = useState<'checking' | 'ready' | 'missing'>(() => (isProfileConfirmed(userId) ? 'ready' : 'checking'))
+
+  useEffect(() => {
+    if (state !== 'checking') return
+    let alive = true
+    getMyProfile()
+      .then(() => {
+        markProfileReady(userId)
+        if (alive) setState('ready')
+      })
+      .catch((error: unknown) => {
+        if (!alive) return
+        // 404 만 온보딩으로. 백엔드 미연결 등 다른 에러로 앱을 막지는 않음
+        setState(error instanceof ApiError && error.status === 404 ? 'missing' : 'ready')
+      })
+    return () => {
+      alive = false
+    }
+  }, [state, userId])
+
+  if (state === 'checking') return null
+  if (state === 'missing') return <Navigate to="/onboarding" replace />
+  return <Outlet />
+}
+
+/**
  * 로그인 상태가 되는 순간 어디로 갈지 정함 (API 명세: 프로필 없으면 404 PROFILE_NOT_FOUND)
  * - 프로필 있음 → 원래 가려던 곳 또는 홈
  * - 404 → 온보딩
@@ -36,12 +70,15 @@ export function RequireAuth() {
 function ResolveLanding() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { session } = useAuth()
+  const userId = session?.userId
 
   useEffect(() => {
     let alive = true
     const target = readFrom(location.state) ?? '/'
     getMyProfile()
       .then(() => {
+        markProfileReady(userId)
         if (alive) navigate(target, { replace: true })
       })
       .catch((error: unknown) => {
@@ -52,7 +89,7 @@ function ResolveLanding() {
     return () => {
       alive = false
     }
-  }, [navigate, location.state])
+  }, [navigate, location.state, userId])
 
   return null
 }

@@ -71,5 +71,23 @@ describe('온보딩 (Figma 최종 디자인)', () => {
     expect(screen.getByText('지역 미설정')).toBeInTheDocument()
     expect(currentPath()).toHaveTextContent('/profile')
   })
-})
 
+  it('로그인은 유지돼 있는데 서버에 프로필이 없으면 홈 대신 온보딩으로 (예전 버전에서 만든 계정)', async () => {
+    loginAsNewUser(false)
+    // 예전 버전은 온보딩 결과를 브라우저에만 저장했음 → 홈에는 '1님'이 보이지만 서버에는 프로필이 없음
+    window.localStorage.setItem('hansul.onboarding', JSON.stringify({ name: '1', regionCode: '', favoriteFoods: [] }))
+    const user = renderApp('/')
+    const nameInput = await screen.findByLabelText('어떤 이름을 사용하실 건가요?')
+    expect(nameInput).toHaveValue('1') // 예전에 입력한 값은 채워 둠
+    expect(currentPath()).toHaveTextContent('/onboarding')
+
+    // 온보딩을 끝내면 그다음부터는 홈·프로필이 정상
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(screen.getByRole('button', { name: '건너뛰기' }))
+    await user.click(screen.getByRole('button', { name: '구이' }))
+    await user.click(screen.getByRole('button', { name: '한술 시작하기' }))
+    await user.click(await screen.findByRole('button', { name: '프로필' }))
+    expect(await screen.findByRole('link', { name: '프로필 편집' })).toBeInTheDocument()
+    expect(currentPath()).toHaveTextContent('/profile')
+  })
+})
