@@ -4,7 +4,10 @@ import './App.css'
 import { isFeaturePage, pathOf, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
+import { useAuth } from './features/auth/auth-context'
 import LoginPage from './features/auth/LoginPage'
+import { PublicOnly, RequireAuth } from './features/auth/RouteGuards'
+import SignupPage from './features/auth/SignupPage'
 import HomeScreen from './features/home/HomeScreen'
 import OnboardingFlow from './features/onboarding/OnboardingFlow'
 import PostOnboardingScreens from './features/screens/PostOnboardingScreens'
@@ -41,6 +44,7 @@ function FeatureRoute(props: FeatureRouteProps) {
 
 function App({ splashMs }: { splashMs?: number }) {
   const navigate = useNavigate()
+  const { status, signOut } = useAuth()
   const showSplash = useSplash(splashMs)
   const [initial] = useState(loadOnboarding)
   const [name, setName] = useState(initial.name)
@@ -54,19 +58,34 @@ function App({ splashMs }: { splashMs?: number }) {
     navigate('/')
   }
 
-  if (showSplash) return <main className="app-shell"><Splash /></main>
+  // 로그아웃하면 RequireAuth 가 알아서 /login 으로 보냄
+  async function logout() {
+    await signOut()
+  }
+
+  // 스플래시가 끝나도 저장된 로그인 세션을 읽는 중이면 계속 스플래시
+  if (showSplash || status === 'loading') return <main className="app-shell"><Splash /></main>
 
   return (
     <main className="app-shell">
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/onboarding"
-          element={<OnboardingRoute name={name} setName={setName} region={region} setRegion={setRegion} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} onExit={() => navigate('/login')} />}
-        />
-        <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
-        {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
-        <Route path="/:page" element={<FeatureRoute name={name} region={region} favoriteFoods={favoriteFoods} onNavigate={go} />} />
+        {/* 로그인 전 화면: 이미 로그인했으면 홈/온보딩으로 */}
+        <Route element={<PublicOnly />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Route>
+
+        {/* 로그인해야 들어갈 수 있는 화면 */}
+        <Route element={<RequireAuth />}>
+          <Route
+            path="/onboarding"
+            element={<OnboardingRoute name={name} setName={setName} region={region} setRegion={setRegion} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} onExit={logout} />}
+          />
+          <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
+          {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
+          <Route path="/:page" element={<FeatureRoute name={name} region={region} favoriteFoods={favoriteFoods} onNavigate={go} onLogout={logout} />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </main>
