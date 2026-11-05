@@ -58,6 +58,12 @@ function EditForm({ profile }: { profile: MyProfile }) {
     setError(null)
   }
 
+  // 직접 로그아웃하면 다시 로그인했을 때 이 편집 화면이 아니라 홈으로 가도록 '돌아갈 곳' 없이 로그인 화면으로
+  async function logout() {
+    await signOut()
+    navigate('/login', { replace: true })
+  }
+
   async function save() {
     if (!canSave) return
     setSaving(true)
@@ -97,7 +103,7 @@ function EditForm({ profile }: { profile: MyProfile }) {
         </button>
       </div>
 
-      <button type="button" className="profile-logout" onClick={() => void signOut()}>로그아웃</button>
+      <button type="button" className="profile-logout" onClick={() => void logout()}>로그아웃</button>
 
       <div className="profile-edit-bottom">
         {error && <p className="profile-error" role="alert">{error}</p>}

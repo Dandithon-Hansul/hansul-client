@@ -57,6 +57,13 @@ describe('로그인', () => {
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
     expect(await screen.findByPlaceholderText('아이디 입력')).toBeInTheDocument()
     expect(readMockDb().session).toBeNull()
+
+    // 다시 로그인하면 편집 화면이 아니라 홈으로
+    await user.type(screen.getByLabelText('아이디'), DEMO_ACCOUNT.loginId)
+    await user.type(screen.getByLabelText('비밀번호'), DEMO_ACCOUNT.password)
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+    expect(await screen.findByText(/오늘은 어떤 맛의 기억을/)).toBeInTheDocument()
+    expect(path()).toHaveTextContent(/^\/$/)
   })
 })
 
