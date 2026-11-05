@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { districtsOf, findRegionByCode, SIDO_NAMES, type RegionOption, type SidoName } from '../../lib/regions'
+import { districtColumnsOf, findRegionByCode, SIDO_NAMES, type RegionOption, type SidoName } from '../../lib/regions'
+import { CloseIcon } from '../icons'
 import './region-sheet.css'
 
 type Props = {
@@ -10,8 +11,9 @@ type Props = {
 }
 
 /**
- * 거주 지역 선택 바텀시트 — 기존 OnboardingFlow 안에 있던 마크업·스타일을 그대로 분리.
- * 온보딩과 프로필 편집에서 같이 씀. 열 때는 부모가 {open && <RegionSheet …/>} 로 렌더.
+ * 거주 지역 선택 바텀시트 — Figma 최종 디자인 기준 (온보딩·프로필 편집 공용)
+ * 시·도 탭 → "시 / 군"(대구는 "구 / 군") 두 열 목록, 고른 곳은 굵게 + 밑줄, "선택완료"로 확정
+ * 부모에서 {open && <RegionSheet …/>} 로 렌더 (열 때마다 현재 값으로 시작)
  */
 function RegionSheet({ value, onClose, onConfirm }: Props) {
   const current = findRegionByCode(value)
@@ -20,20 +22,33 @@ function RegionSheet({ value, onClose, onConfirm }: Props) {
 
   return (
     <div className="region-overlay" role="presentation" onClick={onClose}>
-      <section className="region-sheet" role="dialog" aria-modal="true" aria-labelledby="region-title" onClick={(event) => event.stopPropagation()}>
-        <div className="sheet-handle" />
-        <button className="sheet-close" type="button" onClick={onClose} aria-label="닫기">×</button>
-        <h2 id="region-title">거주 지역을 선택해주세요</h2>
-        <div className="region-tabs">
+      <section className="region-sheet" role="dialog" aria-modal="true" aria-label="거주 지역 선택" onClick={(event) => event.stopPropagation()}>
+        <button className="sheet-close" type="button" onClick={onClose} aria-label="닫기"><CloseIcon /></button>
+
+        <div className="region-tabs" role="tablist">
           {SIDO_NAMES.map((sido) => (
-            <button type="button" className={tab === sido ? 'selected' : ''} key={sido} onClick={() => { setTab(sido); setSelected(null) }}>{sido}</button>
+            <button type="button" role="tab" aria-selected={tab === sido} className={tab === sido ? 'selected' : ''} key={sido} onClick={() => setTab(sido)}>{sido}</button>
           ))}
         </div>
-        <div className="district-list">
-          {districtsOf(tab).map((region) => (
-            <button type="button" className={selected?.code === region.code ? 'selected' : ''} key={region.code} aria-pressed={selected?.code === region.code} onClick={() => setSelected(region)}>{region.sigungu}</button>
+
+        <div className="district-columns">
+          {districtColumnsOf(tab).map((column) => (
+            <div className="district-column" key={column.label}>
+              <p className="district-column-label">{column.label}</p>
+              <ul>
+                {column.items.map((region) => {
+                  const isSelected = selected?.code === region.code
+                  return (
+                    <li key={region.code}>
+                      <button type="button" className={isSelected ? 'selected' : ''} aria-pressed={isSelected} onClick={() => setSelected(region)}>{region.sigungu}</button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
           ))}
         </div>
+
         <button className="sheet-confirm" type="button" disabled={!selected} onClick={() => selected && onConfirm(selected)}>선택완료</button>
       </section>
     </div>

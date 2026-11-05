@@ -4,6 +4,7 @@ import './App.css'
 import { isFeaturePage, pathOf, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
+import { findRegionByCode, findRegionByText, formatRegion } from './lib/regions'
 import { useAuth } from './features/auth/auth-context'
 import LoginPage from './features/auth/LoginPage'
 import { PublicOnly, RequireAuth } from './features/auth/RouteGuards'
@@ -15,16 +16,18 @@ import UserProfilePage from './features/profile/UserProfilePage'
 import OnboardingFlow from './features/onboarding/OnboardingFlow'
 import PostOnboardingScreens from './features/screens/PostOnboardingScreens'
 
-type OnboardingData = { name: string; region: string; favoriteFoods: string[] }
+type OnboardingData = { name: string; regionCode: string; favoriteFoods: string[] }
 const ONBOARDING_KEY = 'hansul.onboarding'
 
-/** 새로고침해도 이름·지역이 남도록 기존에 저장하던 값을 다시 읽어옴 (API 연결 전 임시) */
+/** 새로고침해도 이름·지역이 남도록 저장해 둔 값을 다시 읽어옴 (온보딩 API 연결 전 임시) */
 function loadOnboarding(): OnboardingData {
   try {
-    const saved = JSON.parse(window.localStorage.getItem(ONBOARDING_KEY) ?? 'null') as Partial<OnboardingData> | null
-    return { name: saved?.name ?? '', region: saved?.region ?? '', favoriteFoods: saved?.favoriteFoods ?? [] }
+    const saved = JSON.parse(window.localStorage.getItem(ONBOARDING_KEY) ?? 'null') as (Partial<OnboardingData> & { region?: string }) | null
+    // 예전에는 "대구광역시 · 수성구" 문자열로 저장했음 → 코드로 바꿔 읽기
+    const regionCode = saved?.regionCode ?? findRegionByText(saved?.region)?.code ?? ''
+    return { name: saved?.name ?? '', regionCode, favoriteFoods: saved?.favoriteFoods ?? [] }
   } catch {
-    return { name: '', region: '', favoriteFoods: [] }
+    return { name: '', regionCode: '', favoriteFoods: [] }
   }
 }
 
@@ -47,23 +50,18 @@ function FeatureRoute(props: FeatureRouteProps) {
 
 function App({ splashMs }: { splashMs?: number }) {
   const navigate = useNavigate()
-  const { status, signOut } = useAuth()
+  const { status } = useAuth()
   const showSplash = useSplash(splashMs)
   const [initial] = useState(loadOnboarding)
   const [name, setName] = useState(initial.name)
-  const [region, setRegion] = useState(initial.region)
+  const [regionCode, setRegionCode] = useState(initial.regionCode)
   const [favoriteFoods, setFavoriteFoods] = useState<string[]>(initial.favoriteFoods)
 
   const go = (destination: Destination) => navigate(pathOf(destination))
 
   function completeOnboarding() {
-    window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ name, region, favoriteFoods }))
+    window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ name, regionCode, favoriteFoods }))
     navigate('/')
-  }
-
-  // 로그아웃하면 RequireAuth 가 알아서 /login 으로 보냄
-  async function logout() {
-    await signOut()
   }
 
   // 스플래시가 끝나도 저장된 로그인 세션을 읽는 중이면 계속 스플래시
@@ -82,7 +80,7 @@ function App({ splashMs }: { splashMs?: number }) {
         <Route element={<RequireAuth />}>
           <Route
             path="/onboarding"
-            element={<OnboardingRoute name={name} setName={setName} region={region} setRegion={setRegion} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} onExit={logout} />}
+            element={<OnboardingRoute name={name} setName={setName} regionCode={regionCode} setRegionCode={setRegionCode} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} />}
           />
           <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
           {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
@@ -90,7 +88,7 @@ function App({ splashMs }: { splashMs?: number }) {
           <Route path="/profile/edit" element={<ProfileEditPage />} />
           <Route path="/users/:id" element={<UserProfilePage />} />
           {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
-          <Route path="/:page" element={<FeatureRoute name={name} region={region} favoriteFoods={favoriteFoods} onNavigate={go} />} />
+          <Route path="/:page" element={<FeatureRoute name={name} region={regionCode ? formatRegion(findRegionByCode(regionCode)) : ''} favoriteFoods={favoriteFoods} onNavigate={go} />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

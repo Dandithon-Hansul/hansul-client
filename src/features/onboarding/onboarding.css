@@ -1,26 +1,31 @@
 @reference "../../index.css";
 
+/* 온보딩 — Figma 최종 디자인 기준 (402pt 폭 화면) */
 @layer components {
   .onboarding-flow { @apply relative min-h-svh bg-canvas px-[27px] pb-[calc(env(safe-area-inset-bottom)+105px)] pt-[124px] text-ink; }
-  .onboarding-progress { @apply absolute left-[21px] right-[21px] top-[65px] flex gap-[6px]; }
-  .onboarding-progress span { @apply h-0.5 flex-1 bg-[#ded7ca]; }
-  .onboarding-progress span.active { @apply bg-[#c64c32]; }
-  .onboarding-progress span.complete { @apply bg-brand-muted; }
-  .onboarding-back { @apply absolute left-[14px] top-20 h-8 w-8 cursor-pointer border-0 bg-transparent p-0 text-[30px] leading-6 text-[#777168]; }
-  .onboarding-content h1 { @apply m-0 font-serif text-[22px] font-bold leading-[1.34] tracking-[-.8px]; }
+  .onboarding-progress { @apply absolute left-[21px] right-[21px] top-[63px] flex gap-[6px]; }
+  .onboarding-progress span { @apply h-0.5 flex-1 bg-[#ded8ce]; }
+  .onboarding-progress span.active { @apply bg-terra; }
+  .onboarding-back { @apply absolute left-[12px] top-[82px] flex h-10 w-10 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[#252525]; }
+  .onboarding-back svg { @apply h-[26px] w-[26px]; }
+  .onboarding-content h1 { @apply m-0 font-serif text-[22px] font-bold leading-[1.4] tracking-[-.6px] text-[#252525]; }
   .onboarding-subtitle { @apply mb-[75px] mt-[13px] text-xs text-[#777168]; }
-  .onboarding-question { @apply mb-[19px] block text-sm text-[#5e5850]; }
-  .onboarding-input { @apply flex h-[49px] w-full items-center gap-2.5 rounded-[3px] border border-[#ded7ca] bg-white px-[15px] text-left text-[13px] text-[#5e5850] outline-none; }
-  .onboarding-input::placeholder { @apply text-[#888278]; }
+  .onboarding-question { @apply mb-[19px] mt-0 block text-sm text-[#5e5850]; }
+  .onboarding-question small { @apply text-[11px]; }
+  /* 입력 글자 16px: 더 작으면 iPhone 에서 입력칸을 누를 때 화면이 확대됨 */
+  .onboarding-input { @apply flex h-[47px] w-full items-center gap-2 rounded-[3px] border border-[#ded7ca] bg-canvas px-[15px] text-left text-base text-[#5e5850] outline-none; }
   .onboarding-input:focus { @apply border-[#9d9a8c]; }
-  .region-input { @apply cursor-pointer; }
-  .region-input span { @apply text-xl leading-none text-[#777168]; }
-  .food-choice-grid { @apply grid grid-cols-3 gap-[7px]; }
-  .food-choice { @apply flex h-[100px] cursor-pointer flex-col items-center justify-center gap-[6px] rounded-[3px] border border-[#ded7ca] bg-white px-[3px] py-2 text-[11px] text-[#5e5850]; }
-  .food-choice svg { @apply h-[25px] w-[25px]; fill: #d7d0c2; stroke: #d7d0c2; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .food-choice.selected { @apply border-brand-muted bg-[#e6eadf] text-brand; }
-  .food-choice.selected svg { @apply fill-brand-muted stroke-brand-muted; }
+  .region-input { @apply cursor-pointer text-sm text-[#777168]; }
+  .region-input.has-value { @apply text-[#5e5850]; }
+  .region-input-icon { @apply h-5 w-5 text-[#777168]; }
+  .food-choice-grid { @apply grid grid-cols-3 gap-2 px-[15px]; }
+  .food-choice { @apply flex h-[100px] cursor-pointer flex-col items-center justify-center gap-[10px] rounded-[3px] border border-[#ded7ca] bg-canvas px-[3px] py-2 text-[13px] text-[#5e5850]; }
+  .food-choice svg { @apply h-[26px] w-[26px] text-[#d5cdc1]; }
+  .food-choice.selected { @apply border-[#8c9888] bg-[#f1f5f0]; }
+  .food-choice.selected svg { @apply text-[#8c9888]; }
   .onboarding-bottom { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+30px)] left-1/2 z-[2] w-[min(calc(100%-42px),360px)] -translate-x-1/2; }
-  .onboarding-bottom button { @apply h-12 w-full cursor-pointer rounded-[3px] border border-brand-muted bg-brand-muted text-[15px] text-white; }
-  .onboarding-bottom button:disabled { @apply cursor-not-allowed border-[#ded7ca] bg-white text-[#8f887e]; }
+  .onboarding-bottom button { @apply h-12 w-full cursor-pointer rounded-[3px] border border-[#45573e] bg-[#45573e] text-base text-white; }
+  .onboarding-bottom button:disabled,
+  .onboarding-bottom button.is-skip { @apply border-[#efebe4] bg-[#f8f5f0] text-[#5e5850]; }
+  .onboarding-bottom button:disabled { @apply cursor-not-allowed; }
 }

@@ -62,7 +62,7 @@ describe('프로필 편집', () => {
 
     await user.click(screen.getByRole('button', { name: /거주지역/ }))
     const sheet = screen.getByRole('dialog')
-    await user.click(within(sheet).getByRole('button', { name: '대구광역시' }))
+    await user.click(within(sheet).getByRole('tab', { name: '대구광역시' }))
     await user.click(within(sheet).getByRole('button', { name: '수성구' }))
     await user.click(within(sheet).getByRole('button', { name: '선택완료' }))
 

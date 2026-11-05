@@ -25,6 +25,18 @@ export function districtsOf(sido: SidoName): RegionOption[] {
   return DISTRICTS[sido].map(([sigungu, code]) => ({ code, sido, sigungu }))
 }
 
+/**
+ * 지역 시트의 두 열 (Figma: "시 / 군", 가나다순). 대구는 "구 / 군"
+ */
+export function districtColumnsOf(sido: SidoName): Array<{ label: string; items: RegionOption[] }> {
+  const sorted = districtsOf(sido).sort((a, b) => a.sigungu.localeCompare(b.sigungu, 'ko'))
+  const first = sido === '대구광역시' ? '구' : '시'
+  return [
+    { label: first, items: sorted.filter((region) => region.sigungu.endsWith(first)) },
+    { label: '군', items: sorted.filter((region) => region.sigungu.endsWith('군')) },
+  ]
+}
+
 const ALL: RegionOption[] = SIDO_NAMES.flatMap(districtsOf)
 
 export function findRegionByCode(code: string | null | undefined): RegionOption | undefined {
