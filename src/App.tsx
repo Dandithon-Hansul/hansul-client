@@ -1,72 +1,112 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState } from 'react'
+import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
 import './App.css'
+import { isFeaturePage, pathOf, type Destination } from './app/paths'
+import Splash from './app/Splash'
+import { useSplash } from './app/useSplash'
+import { DEFAULT_ROLE, setupProfile } from './lib/api/profile'
+import { markProfileReady } from './lib/api/profileStatus'
+import { findRegionByCode, findRegionByText, formatRegion } from './lib/regions'
+import { useAuth } from './features/auth/auth-context'
+import LoginPage from './features/auth/LoginPage'
+import { PublicOnly, RequireAuth, RequireProfile } from './features/auth/RouteGuards'
+import SignupPage from './features/auth/SignupPage'
 import HomeScreen from './features/home/HomeScreen'
-import PostOnboardingScreens, { type FeaturePage } from './features/screens/PostOnboardingScreens'
+import ProfileEditPage from './features/profile/ProfileEditPage'
+import ProfilePage from './features/profile/ProfilePage'
+import UserProfilePage from './features/profile/UserProfilePage'
 import OnboardingFlow from './features/onboarding/OnboardingFlow'
+import PostOnboardingScreens from './features/screens/PostOnboardingScreens'
 
-type Screen = 'splash' | 'login' | 'onboarding' | 'home' | FeaturePage
+type OnboardingData = { name: string; regionCode: string; favoriteFoods: string[] }
+const ONBOARDING_KEY = 'hansul.onboarding'
 
-function App() {
-  const [screen, setScreen] = useState<Screen>('splash')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [name, setName] = useState('')
-  const [region, setRegion] = useState('')
-  const [favoriteFoods, setFavoriteFoods] = useState<string[]>([])
-  const [onboardingStep, setOnboardingStep] = useState(0)
+/** 새로고침해도 이름·지역이 남도록 저장해 둔 값을 다시 읽어옴 (온보딩 API 연결 전 임시) */
+function loadOnboarding(): OnboardingData {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(ONBOARDING_KEY) ?? 'null') as (Partial<OnboardingData> & { region?: string }) | null
+    // 예전에는 "대구광역시 · 수성구" 문자열로 저장했음 → 코드로 바꿔 읽기
+    const regionCode = saved?.regionCode ?? findRegionByText(saved?.region)?.code ?? ''
+    return { name: saved?.name ?? '', regionCode, favoriteFoods: saved?.favoriteFoods ?? [] }
+  } catch {
+    return { name: '', regionCode: '', favoriteFoods: [] }
+  }
+}
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setScreen('login'), 3000)
-    return () => window.clearTimeout(timer)
-  }, [])
+type OnboardingRouteProps = Omit<Parameters<typeof OnboardingFlow>[0], 'step' | 'setStep'>
 
-  function startLogin(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (email.trim() && password.trim()) setScreen('home')
+/** 온보딩에 들어올 때마다 1단계부터 시작하도록 step 은 여기서 관리 */
+function OnboardingRoute(props: OnboardingRouteProps) {
+  const [step, setStep] = useState(0)
+  return <OnboardingFlow {...props} step={step} setStep={setStep} />
+}
+
+type FeatureRouteProps = Omit<Parameters<typeof PostOnboardingScreens>[0], 'page'>
+
+/** /record, /chat, /profile … 를 기존 PostOnboardingScreens 의 page 로 넘김 */
+function FeatureRoute(props: FeatureRouteProps) {
+  const { page } = useParams()
+  if (!isFeaturePage(page)) return <Navigate to="/" replace />
+  return <PostOnboardingScreens {...props} page={page} />
+}
+
+function App({ splashMs }: { splashMs?: number }) {
+  const navigate = useNavigate()
+  const { status, session } = useAuth()
+  const showSplash = useSplash(splashMs)
+  const [initial] = useState(loadOnboarding)
+  const [name, setName] = useState(initial.name)
+  const [regionCode, setRegionCode] = useState(initial.regionCode)
+  const [favoriteFoods, setFavoriteFoods] = useState<string[]>(initial.favoriteFoods)
+
+  const go = (destination: Destination) => navigate(pathOf(destination))
+
+  /** "한술 시작하기": 서버에 프로필 저장 → 홈. 실패하면 에러를 던져 온보딩 화면에서 안내 */
+  async function completeOnboarding() {
+    await setupProfile({
+      display_name: name.trim(),
+      region_code: regionCode || null, // 지역 건너뛰면 null
+      food_preferences: favoriteFoods,
+      role: DEFAULT_ROLE,
+    })
+    markProfileReady(session?.userId) // 이제 프로필이 있으니 홈 등에 들어갈 수 있음
+    // 홈 화면이 아직 API 대신 이 값으로 이름을 보여줘서 함께 저장 (홈 API 연결 후 제거)
+    window.localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ name, regionCode, favoriteFoods }))
+    navigate('/', { replace: true })
   }
 
-  function navigate(destination: 'home' | FeaturePage) {
-    setScreen(destination)
-  }
-
-  function completeOnboarding() {
-    window.localStorage.setItem('hansul.onboarding', JSON.stringify({ name, region, favoriteFoods }))
-    setScreen('home')
-  }
+  // 스플래시가 끝나도 저장된 로그인 세션을 읽는 중이면 계속 스플래시
+  if (showSplash || status === 'loading') return <main className="app-shell"><Splash /></main>
 
   return (
     <main className="app-shell">
-      {screen === 'splash' && (
-        <section className="splash" aria-label="한술 시작 화면">
-          <div className="splash-brand">
-            <span className="splash-mark-frame"><img className="splash-mark" src="/logo.svg" alt="" /></span>
-            <span>한술</span>
-          </div>
-        </section>
-      )}
+      <Routes>
+        {/* 로그인 전 화면: 이미 로그인했으면 홈/온보딩으로 */}
+        <Route element={<PublicOnly />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+        </Route>
 
-      {screen === 'login' && (
-        <section className="flow-screen">
-          <div className="flow-card login-card">
-            <div className="login-brand">
-              <img className="login-mark" src="/images/hansul-mark-alt.png" alt="" />
-              <span>한술</span>
-            </div>
-            <p className="login-tagline">당신의 한술이 우리 지역의 맛을 이어갑니다.</p>
-            <form onSubmit={startLogin}>
-              <input aria-label="아이디" type="text" autoComplete="username" placeholder="아이디 입력" value={email} onChange={(event) => setEmail(event.target.value)} required />
-              <input aria-label="비밀번호" type="password" autoComplete="current-password" placeholder="비밀번호 입력" value={password} onChange={(event) => setPassword(event.target.value)} required />
-              <button className="primary-button login-button" type="submit">로그인</button>
-            </form>
-            <button className="signup-link" type="button" onClick={() => { setOnboardingStep(0); setScreen('onboarding') }}>회원가입</button>
-          </div>
-        </section>
-      )}
+        {/* 로그인해야 들어갈 수 있는 화면 */}
+        <Route element={<RequireAuth />}>
+          <Route
+            path="/onboarding"
+            element={<OnboardingRoute name={name} setName={setName} regionCode={regionCode} setRegionCode={setRegionCode} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} onComplete={completeOnboarding} />}
+          />
+          {/* 온보딩을 끝내서 서버에 프로필이 있어야 들어갈 수 있는 화면 */}
+          <Route element={<RequireProfile />}>
+            <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
+            {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/edit" element={<ProfileEditPage />} />
+            <Route path="/users/:id" element={<UserProfilePage />} />
+            {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
+            <Route path="/:page" element={<FeatureRoute name={name} region={regionCode ? formatRegion(findRegionByCode(regionCode)) : ''} favoriteFoods={favoriteFoods} onNavigate={go} />} />
+          </Route>
+        </Route>
 
-      {screen === 'onboarding' && <OnboardingFlow name={name} setName={setName} region={region} setRegion={setRegion} favoriteFoods={favoriteFoods} setFavoriteFoods={setFavoriteFoods} step={onboardingStep} setStep={setOnboardingStep} onComplete={completeOnboarding} onExit={() => setScreen('login')} />}
-
-      {screen === 'home' && <HomeScreen name={name} onNavigate={navigate} />}
-      {screen !== 'splash' && screen !== 'login' && screen !== 'onboarding' && screen !== 'home' && <PostOnboardingScreens page={screen} name={name} region={region} favoriteFoods={favoriteFoods} onNavigate={navigate} />}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </main>
   )
 }

@@ -1,0 +1,78 @@
+@reference "../../index.css";
+
+/* 마이페이지·프로필 편집·다른 사용자 프로필 — 기능 명세서 목업 기준 */
+@layer components {
+  .profile-page { @apply relative flex min-h-svh flex-col bg-canvas pb-[calc(env(safe-area-inset-bottom)+28px)] text-ink; }
+  .profile-topbar { @apply flex h-[60px] items-end px-[14px] pb-1; }
+  .profile-back { @apply h-9 w-9 cursor-pointer border-0 bg-transparent p-0 text-[30px] leading-6 text-[#4a4741]; }
+
+  /* 공용: 아바타 */
+  .avatar { @apply inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#8c9888]; }
+  .avatar img { @apply h-full w-full object-cover; }
+  .avatar-placeholder { @apply h-1/2 w-1/2 text-white; }
+  .is-skeleton { @apply animate-pulse bg-[#ece8e0]; }
+  .skeleton-line { @apply block h-3 animate-pulse rounded bg-[#ece8e0]; }
+
+  /* 마이페이지 상단 */
+  .profile-head { @apply flex items-center gap-4 px-[26px] pb-6 pt-2; }
+  .profile-head-text { @apply flex min-w-0 flex-1 flex-col gap-1.5; }
+  .profile-name { @apply m-0 truncate text-[17px] font-semibold text-[#262626]; }
+  .profile-region { @apply m-0 text-[11px] text-[#666159]; }
+  .profile-edit-button { @apply shrink-0 rounded-full border border-[#ded7ca] bg-white px-3 py-1.5 text-[11px] text-[#5e5850] no-underline; }
+
+  /* 통계 */
+  .profile-stats { @apply mx-[20px] my-0 grid grid-cols-3 border-y border-[#ece8e0] py-[14px]; }
+  .profile-stats > div { @apply flex flex-col-reverse items-center gap-1.5 border-l border-[#ece8e0]; }
+  .profile-stats > div:first-child { @apply border-l-0; }
+  .profile-stats dd { @apply m-0 text-[17px] text-[#393b35]; }
+  .profile-stats dt { @apply text-[11px] text-[#666159]; }
+
+  /* 탭 */
+  .profile-tab-list { @apply mx-[20px] mt-[52px] grid grid-cols-2 border-b border-[#ece8e0]; }
+  .profile-tab-list button { @apply -mb-px h-10 cursor-pointer border-0 border-b-2 border-transparent bg-transparent text-[13px] text-[#8b867d]; }
+  .profile-tab-list button.selected { @apply border-terra font-semibold text-[#262626]; }
+  .profile-tab-panel { @apply px-[20px] pt-[6px]; }
+
+  /* 레시피 그리드 */
+  .recipe-grid { @apply m-0 grid list-none grid-cols-3 gap-[3px] p-0; }
+  .recipe-tile { @apply relative block aspect-[3/4] overflow-hidden bg-[#ece8e0]; }
+  .recipe-tile img { @apply h-full w-full object-cover; }
+  .recipe-tile-empty { @apply flex h-full w-full items-center justify-center; }
+  .recipe-tile-empty svg { @apply h-8 w-8 text-white/50; }
+  .recipe-tile-title { @apply absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5 pt-6 text-[11px] text-white; }
+  .profile-loading-more { @apply py-4 text-center text-[11px] text-[#a8a196]; }
+
+  /* 안내·에러 */
+  .profile-message { @apply flex flex-col items-center gap-3 px-6 py-14 text-center text-[13px] text-[#8b867d]; }
+  .profile-message p { @apply m-0; }
+  .profile-message a, .profile-message button { @apply cursor-pointer border-0 bg-transparent p-0 text-[12px] text-brand underline underline-offset-4; }
+
+  /* 프로필 편집 */
+  .profile-edit-photo { @apply flex flex-col items-center gap-3 pb-10 pt-4; }
+  .profile-edit-photo button { @apply cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-[#393b35] underline underline-offset-4; }
+  .profile-edit-fields { @apply mx-[20px] border-t border-[#ece8e0]; }
+  .profile-edit-row { @apply flex h-[58px] w-full items-center border-0 border-b border-solid border-[#ece8e0] bg-transparent px-3 text-left font-[inherit]; }
+  .profile-edit-row > span { @apply w-[72px] shrink-0 text-[13px] text-[#666159]; }
+  .profile-edit-row input { @apply h-full min-w-0 flex-1 border-0 bg-transparent text-base text-[#262626] outline-none; }
+  .profile-edit-row strong { @apply flex-1 text-[14px] font-normal text-[#262626]; }
+  .profile-edit-row i { @apply not-italic text-lg text-[#a8a196]; }
+  button.profile-edit-row { @apply cursor-pointer; }
+  .profile-logout { @apply mx-auto mt-7 cursor-pointer border-0 bg-transparent text-[11px] text-[#a8a196] underline underline-offset-4; }
+  .profile-edit-bottom { @apply mt-auto px-[20px] pt-6; }
+  .profile-error { @apply mb-3 text-center text-xs text-terra; }
+  .profile-save { @apply h-12 w-full cursor-pointer rounded-[3px] border-0 bg-brand text-[15px] text-white; }
+  .profile-save:disabled { @apply cursor-not-allowed border border-solid border-[#ded7ca] bg-white text-[#8f887e]; }
+
+  /* 다른 사용자 프로필 */
+  .user-head { @apply flex items-center gap-6 px-[26px] pt-2; }
+  .user-stats { @apply m-0 grid flex-1 grid-cols-2; }
+  .user-stats > div { @apply flex flex-col-reverse items-center gap-1.5; }
+  .user-stats dd { @apply m-0 text-[17px] text-[#393b35]; }
+  .user-stats dt { @apply text-[11px] text-[#666159]; }
+  .user-intro { @apply min-h-[56px] px-[26px] pt-4; }
+  .user-name { @apply m-0 flex items-center gap-2 text-[17px] font-semibold text-[#262626]; }
+  .user-name span { @apply flex items-center gap-0.5 text-[11px] font-medium text-[#4a4741]; }
+  .user-pin { @apply h-3.5 w-3.5 text-[#262626]; }
+  .user-bio { @apply m-0 mt-1.5 whitespace-pre-line text-[12px] text-[#666159]; }
+  .user-section-title { @apply mx-[20px] mb-0 mt-8 border-b border-[#ece8e0] pb-2 text-center text-[13px] font-normal text-[#b5b0a6]; }
+}
