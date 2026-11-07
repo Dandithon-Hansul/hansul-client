@@ -1,0 +1,19 @@
+@reference "../../index.css";
+
+/* 지역 선택 시트 — Figma 최종 디자인 기준 */
+@layer components {
+  .region-overlay { @apply fixed inset-0 z-[5] flex items-end justify-center bg-black/60; }
+  .region-sheet { @apply relative flex h-[calc(100svh-85px)] w-full max-w-[430px] flex-col rounded-t-[20px] bg-white px-[21px] pb-[calc(env(safe-area-inset-bottom)+30px)] pt-[75px]; }
+  .sheet-close { @apply absolute right-[14px] top-[10px] flex h-10 w-10 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-[#202020]; }
+  .sheet-close svg { @apply h-[22px] w-[22px]; }
+  .region-tabs { @apply flex shrink-0 gap-3; }
+  .region-tabs button { @apply h-[47px] flex-1 cursor-pointer rounded-[3px] border border-[#ded7ca] bg-white text-[15px] text-[#6b6b6b]; }
+  .region-tabs button.selected { @apply border-[#c5d0c1] bg-[#c5d0c1] text-[#252525]; }
+  .district-columns { @apply mt-[44px] grid min-h-0 flex-1 grid-cols-2 content-start overflow-y-auto px-1.5 pb-4; }
+  .district-column-label { @apply m-0 mb-[12px] text-[15px] font-semibold text-black; }
+  .district-column ul { @apply m-0 list-none p-0; }
+  .district-column li button { @apply cursor-pointer border-0 bg-transparent px-[3px] py-[9px] text-left text-[15px] leading-[21px] text-[#6c6c6c]; }
+  .district-column li button.selected { @apply font-semibold text-black underline underline-offset-[5px]; }
+  .sheet-confirm { @apply mt-3 h-12 shrink-0 cursor-pointer rounded-[3px] border border-[#50604b] bg-[#50604b] text-base text-white; }
+  .sheet-confirm:disabled { @apply cursor-not-allowed border-[#efebe4] bg-[#f8f5f1] text-[#5e5850]; }
+}

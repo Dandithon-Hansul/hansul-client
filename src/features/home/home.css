@@ -1,0 +1,47 @@
+@reference "../../index.css";
+
+@layer components {
+  .home-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+116px)] text-ink; padding-top: calc(env(safe-area-inset-top) + 139px); }
+  .home-header { @apply absolute left-[22px] right-[22px] flex h-[42px] items-center justify-between; top: calc(env(safe-area-inset-top) + 74px); }
+  .home-brand { @apply inline-flex items-center gap-[5px] font-serif text-[15px] text-brand-muted no-underline; }
+  .home-brand img { @apply h-[27px] w-[29px] object-contain; }
+  .profile-shortcut { @apply h-[34px] w-[34px] cursor-pointer border-0 bg-transparent p-px text-[#585149]; }
+  .profile-shortcut svg { @apply block h-full w-full; }
+  .home-intro h1 { @apply m-0 mb-[19px] font-serif text-[21px] font-bold leading-[1.42] tracking-[-.8px]; }
+  .recipe-search { @apply flex h-12 items-center gap-2.5 rounded-[28px] border border-dashed border-[#bfb9af] px-[17px] text-[#aaa399]; }
+  .recipe-search input { @apply w-full border-0 bg-transparent text-xs text-[#34362f] outline-none; }
+  .recipe-search input::placeholder { @apply text-[#aaa399]; }
+  .recipe-search svg { @apply h-[19px] w-[19px]; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .record-promo { @apply relative mt-[23px] flex h-[152px] w-full cursor-pointer flex-col items-start justify-between overflow-hidden rounded-[9px] border-0 bg-brand-muted px-[22px] pb-[18px] pt-7 text-left text-white; }
+  .record-promo-title { @apply font-serif text-[15px] font-bold leading-[1.6]; }
+  .record-promo-link { @apply text-xs; }
+  .record-promo-link span { @apply ml-1; }
+  .sound-mark { @apply absolute right-7 top-[34px] h-[65px] w-[65px]; fill: none; stroke: #83907f; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: .55; }
+  .recipe-section { @apply mt-[34px]; }
+  .section-heading { @apply mb-2 flex h-[25px] w-full cursor-pointer items-center justify-between border-0 bg-transparent p-0 text-left font-serif text-[15px] text-ink; }
+  .section-arrow { @apply font-sans text-[28px] font-light leading-5; }
+  .recipe-feature { @apply relative flex h-[183px] w-full cursor-pointer flex-col items-start justify-end gap-0.5 overflow-hidden rounded-[9px] border-0 bg-[#ddd] px-[15px] pb-[18px] text-left text-white; }
+  .recipe-feature img { @apply absolute inset-0 h-full w-full object-cover; }
+  .recipe-gradient { @apply absolute inset-x-0 bottom-0 top-[35%]; background: linear-gradient(180deg, transparent, rgba(20,16,12,.72)); }
+  .recipe-title, .recipe-location { @apply relative z-[1]; }
+  .recipe-title { @apply font-serif text-[19px] font-bold; }
+  .monthly-section .recipe-title { @apply text-lg; }
+  .recommendation-section { @apply mt-[42px]; }
+  .recommendation-section h2 { @apply m-0 mb-2 font-serif text-[15px] font-bold leading-[25px]; }
+  .recommendation-card { @apply h-[183px] pb-5; }
+  .recipe-location { @apply text-[11px]; }
+  .home-bottom-nav { @apply pointer-events-none fixed left-1/2 z-[3] flex w-[min(calc(100%-44px),386px)] -translate-x-1/2 items-center justify-center gap-4; bottom: calc(env(safe-area-inset-bottom) + 30px); }
+  .home-bottom-nav button { @apply pointer-events-auto cursor-pointer; }
+  .home-nav-pills { @apply flex h-[58px] w-[204px] items-center justify-between rounded-[40px] bg-white p-[5px] shadow-[0_2px_24px_#29251d1c]; }
+  .home-nav-button { @apply grid h-12 w-[calc(50%-2px)] place-items-center rounded-[30px] border-0 bg-transparent text-[#d0d2ce]; }
+  .home-nav-button.is-active { @apply bg-[#e6e5e4] text-[#585149]; }
+  .home-nav-button svg { @apply h-[21px] w-[21px]; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .home-record-button { @apply grid h-[58px] w-[58px] place-items-center rounded-full border-0 bg-[#585149] text-white shadow-[0_2px_18px_#29251d1c]; }
+  .home-record-button svg { @apply h-[23px] w-[23px]; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .visually-hidden { @apply absolute m-[-1px] h-px w-px overflow-hidden whitespace-nowrap border-0 p-0; clip: rect(0,0,0,0); }
+}
+
+@media (min-width: 431px) {
+  .home-header { left: calc(50% - 193px); right: calc(50% - 193px); }
+  .home-bottom-nav { bottom: 24px; }
+}
