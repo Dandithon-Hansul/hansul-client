@@ -7,7 +7,7 @@
   .feature-header h1 { @apply m-0 text-center font-serif text-[15px] font-bold; }
   .record-view { @apply pt-[118px] text-center; }
   .feature-kicker { @apply mb-2.5 text-xs font-semibold tracking-[.5px] text-terra; }
-  .record-view h2,.map-intro h2,.recipe-detail-content h2,.cook-page h2,.profile-summary h2 { @apply m-0 font-serif text-2xl leading-[1.5]; white-space: pre-line; }
+  .record-view h2,.recipe-detail-content h2,.cook-page h2,.profile-summary h2 { @apply m-0 font-serif text-2xl leading-[1.5]; white-space: pre-line; }
   .feature-muted { @apply text-xs leading-[1.7] text-[#8e8a82]; }
   .record-orb { @apply relative mx-auto mt-[52px] mb-[17px] grid h-[116px] w-[116px] cursor-pointer place-items-center rounded-full border-0 bg-[#b74731] text-white shadow-[0_0_0_2px_#fff,0_0_0_3px_#f1d8d0]; }
   .record-orb svg { @apply h-[38px] w-[38px]; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -118,15 +118,6 @@
   .food-list-card b { @apply text-xs; }
   .food-list-card small { @apply text-[10px] text-[#8c877e]; }
   .food-list-card span:last-child { @apply text-[22px] text-[#807a71]; }
-  .map-intro { @apply pt-9; }
-  .region-switch { @apply my-6 flex gap-2; }
-  .region-switch button { @apply h-[42px] flex-1 border border-[#e5e1d8] bg-white text-xs text-[#6b6b63]; }
-  .region-switch button.selected { @apply border-brand-muted bg-[#dfe5db] text-[#3e503a]; }
-  .map-illustration { @apply grid h-[390px] place-items-center overflow-hidden rounded-xl bg-[#ecf0e8]; }
-  .map-region { @apply flex h-[280px] w-[220px] flex-col items-center justify-center gap-[18px] bg-[#d7e7c9] text-[15px] font-bold text-[#4d6346]; clip-path: polygon(27% 0,74% 5%,93% 21%,83% 41%,100% 59%,77% 76%,71% 97%,42% 88%,19% 97%,23% 71%,0 52%,16% 34%,6% 15%); }
-  .map-region span { @apply rounded-[14px] bg-white px-2.5 py-1.5 text-[10px]; }
-  .map-region b,.map-region small { @apply rounded-[14px] bg-[#bc5038] px-[9px] py-1.5 text-[10px] text-white; }
-  .map-region small { @apply bg-white text-[#5c6957]; }
   .profile-summary { @apply flex flex-col items-center px-0 pt-[45px] pb-7 text-center; }
   .profile-avatar { @apply grid h-[82px] w-[82px] place-items-center rounded-full bg-[#dfe5db] text-[29px] text-[#64745e]; }
   .profile-summary h2 { @apply mt-[13px] text-xl; }
