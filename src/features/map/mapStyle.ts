@@ -12,8 +12,7 @@ export const OUTLINE = '#24571d'
 export const DAEGU_BORDER = '#9f6044'
 /** 시·군 사이, 대구 구·군 사이 경계선 */
 export const INNER_LINE = '#ffffff'
-/** 선택한 지역 테두리 (Figma: 진한 회색 선 + 빨간 핀) */
-export const SELECTED_STROKE = '#4b5348'
+/** 선택한 지역 표시 — 빨간 핀만 */
 export const PIN = '#c4453b'
 export const LABEL = '#2b2b2b'
 

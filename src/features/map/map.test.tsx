@@ -7,7 +7,7 @@ import type { KakaoMaps } from './kakaoLoader'
 import KakaoRegionMap from './KakaoRegionMap'
 import { toMapCode } from './mapRegionCode'
 import { MAP_SHAPES } from './mapShapes'
-import { SELECTED_STROKE, shortName } from './mapStyle'
+import { shortName } from './mapStyle'
 
 const region = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}, 레시피`) })
 const sheet = (name: string) => screen.getByRole('region', { name: `${name} 지역의 인기 레시피` })
@@ -142,6 +142,7 @@ describe('카카오맵 모드', () => {
     type Options = Record<string, unknown>
     const polygons: Array<{ options: Options; setOptions: Mock<(options: Options) => void>; click?: () => void }> = []
     const setBounds = vi.fn()
+    const overlays: Array<{ content: unknown; setMap: Mock<(map: unknown) => void> }> = []
     const maps = {
       load: (callback: () => void) => callback(),
       LatLng: class {
@@ -165,7 +166,15 @@ describe('카카오맵 모드', () => {
         setMap() {}
         setOptions(options: Record<string, unknown>) { this.record.setOptions(options) }
       },
-      CustomOverlay: class { setMap() {} setPosition() {} },
+      CustomOverlay: class {
+        record: (typeof overlays)[number]
+        constructor(options: { content: unknown }) {
+          this.record = { content: options.content, setMap: vi.fn<(map: unknown) => void>() }
+          overlays.push(this.record)
+        }
+        setMap(map: unknown) { this.record.setMap(map) }
+        setPosition() {}
+      },
       ZoomControl: class {},
       ControlPosition: { RIGHT: 1 },
       event: {
@@ -175,11 +184,11 @@ describe('카카오맵 모드', () => {
       },
     }
     window.kakao = { maps: maps as unknown as KakaoMaps }
-    return { polygons, setBounds }
+    return { polygons, setBounds, overlays }
   }
 
-  it('경계 파일로 지역마다 폴리곤을 만들고, 누르면 선택·선택하면 회색 테두리와 확대로 바뀐다', async () => {
-    const { polygons, setBounds } = fakeKakao()
+  it('경계 파일로 지역마다 폴리곤을 만들고, 누르면 선택·선택하면 확대 + 빨간 핀만 표시한다', async () => {
+    const { polygons, setBounds, overlays } = fakeKakao()
     const geo = await import('../../../public/geo/daegu-gyeongbuk.geojson?raw').then((module) => JSON.parse(module.default))
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(geo))))
     const onSelect = vi.fn()
@@ -198,7 +207,10 @@ describe('카카오맵 모드', () => {
 
     setBounds.mockClear()
     rerender(<KakaoRegionMap appKey="test" counts={counts} selected="47170" onSelect={onSelect} onFail={onFail} insets={INSETS} />)
-    expect(polygons[andongIndex].setOptions).toHaveBeenLastCalledWith(expect.objectContaining({ strokeColor: SELECTED_STROKE }))
+    // 테두리·색은 그대로, 핀만 지도에 올라감
+    expect(polygons[andongIndex].setOptions).not.toHaveBeenCalled()
+    const pin = overlays.find((overlay) => overlay.content instanceof HTMLElement && overlay.content.className === 'kakao-region-pin')
+    expect(pin?.setMap).toHaveBeenLastCalledWith(expect.anything())
     expect(setBounds).toHaveBeenCalledTimes(1)
   })
 

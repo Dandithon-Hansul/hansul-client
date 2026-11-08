@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadKakaoMaps, type KakaoLatLngBounds, type KakaoMap, type KakaoMaps, type KakaoOverlay, type KakaoPolygon } from './kakaoLoader'
-import { DAEGU_BORDER, DAEGU_CODE, fillOf, GEO_URL, INNER_LINE, mapLabel, SELECTED_STROKE } from './mapStyle'
+import { DAEGU_BORDER, DAEGU_CODE, fillOf, GEO_URL, INNER_LINE, mapLabel } from './mapStyle'
 import { MAP_SHAPES } from './mapShapes'
 import type { RegionMapProps } from './regionMapProps'
 
@@ -63,7 +63,8 @@ function KakaoRegionMap({ selected, onSelect, appKey, onFail, insets }: Props) {
               if (code !== ULLEUNG) mainland.extend(point)
               return point
             }))
-            const shape = new maps.Polygon({ path: path.length === 1 ? path[0] : path, strokeWeight: 1, strokeColor: INNER_LINE, strokeOpacity: 1, fillColor: fillOf(code), fillOpacity: 0.85 })
+            const isDaegu = code === DAEGU_CODE
+            const shape = new maps.Polygon({ path: path.length === 1 ? path[0] : path, strokeWeight: isDaegu ? 2 : 1, strokeColor: isDaegu ? DAEGU_BORDER : INNER_LINE, strokeOpacity: 1, fillColor: fillOf(code), fillOpacity: 0.85, zIndex: isDaegu ? 2 : 1 })
             shape.setMap(map)
             maps.event.addListener(shape, 'click', () => onSelectRef.current(code))
             return shape
@@ -95,20 +96,10 @@ function KakaoRegionMap({ selected, onSelect, appKey, onFail, insets }: Props) {
     }
   }, [appKey])
 
-  // 2) 선택한 지역 강조(회색 테두리)·확대·마커 — 시트·메뉴에 가리지 않게 위아래 여백
+  // 2) 선택한 지역으로 확대 + 빨간 핀 — 시트·메뉴에 가리지 않게 위아래 여백
   const { top, bottom } = insets
   useEffect(() => {
     if (!ready) return
-    for (const [code, region] of ready.regions) {
-      const isSelected = code === selected
-      for (const polygon of region.polygons) {
-        polygon.setOptions({
-          strokeColor: isSelected ? SELECTED_STROKE : code === DAEGU_CODE ? DAEGU_BORDER : INNER_LINE,
-          strokeWeight: isSelected ? 3 : code === DAEGU_CODE ? 2 : 1,
-          zIndex: isSelected ? 2 : 1,
-        })
-      }
-    }
     const region = selected ? ready.regions.get(selected) : undefined
     const info = MAP_SHAPES.find((shape) => shape.code === selected)
     if (region && info) {
