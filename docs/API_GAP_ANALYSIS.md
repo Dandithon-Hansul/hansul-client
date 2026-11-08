@@ -19,6 +19,7 @@
 | `POST /api/steps/images`, `/api/steps/:order/image`, `/photo` | 조리 화면의 이미지 생성·재생성·완성 사진 연결 |
 | `POST /api/sensory/vectorize` | 기록 화면의 손맛 프로파일 업데이트 버튼 |
 | `GET /api/profiles/me/recipes`, `/api/profiles/me/saved` | 내 프로필 레시피·저장 목록 |
+| `GET /api/map/regions`, `GET /api/map/regions/:region_code/recipes` | `src/lib/api/map.ts`; 지역 지도(`/map`) 색 구분·인기 레시피 카드·목록 팝업 |
 
 공통 JSON 요청은 `src/lib/api/client.ts`를 사용하며 Supabase access token을 Bearer 헤더로 전달합니다. 채팅·평가 SSE는 `src/lib/api/recipes.ts`에서 스트림으로 처리합니다.
 
@@ -26,8 +27,6 @@
 
 | 엔드포인트 | 상태 |
 |---|---|
-| `GET /api/map/regions` | 미연결 (지도 담당 범위) |
-| `GET /api/map/regions/:region_code/recipes` | 미연결 (지도 담당 범위) |
 | `GET /api/profiles/:id`, `/api/profiles/:id/recipes` | 명세 외 경로를 코드에서 호출 중. 백엔드와 계약 확인 필요 |
 
 ## 동작 및 확인 메모

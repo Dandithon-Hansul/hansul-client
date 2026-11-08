@@ -96,6 +96,7 @@ npm run dev -- --host 0.0.0.0
 | `VITE_AUTH_EMAIL_DOMAIN` | 아이디 → 이메일 변환용 도메인 (기본 `hansul.app`) |
 | `VITE_API_BASE_URL` | 배포된 백엔드 주소. 비우면 같은 주소의 `/api` |
 | `VITE_API_PROXY_TARGET` | 개발 중 `/api` 를 넘겨줄 로컬 백엔드 (예: `http://localhost:3000`) |
+| `VITE_KAKAO_MAP_KEY` | 카카오맵 JavaScript 키. 비우면 키 없이 동작하는 SVG 지도 |
 
 ### 화면 주소
 
@@ -107,7 +108,8 @@ npm run dev -- --host 0.0.0.0
 | `/profile` (`?tab=saved`) | 마이페이지 (나의 레시피 / 저장한 맛) | O |
 | `/profile/edit` | 프로필 편집 (사진·이름·거주지역, 로그아웃) | O |
 | `/users/:id` | 다른 사용자(전승자) 프로필 — mock 예시 `/users/u-kim-hansul` | O |
-| `/record` `/chat` `/recipe` `/cook` `/monthly` `/map` | 기존 화면 | O |
+| `/map` (`?region=47170`) | 지역의 맛 지도 — 지역 선택 → 인기 레시피 카드 → 목록 팝업 | O |
+| `/record` `/chat` `/recipe` `/cook` `/monthly` | 기존 화면 | O |
 
 기존 컴포넌트의 `onNavigate('record')` 호출은 그대로 쓰면 되고, `App.tsx` 에서 주소로 바꿔 이동합니다.
 
@@ -122,3 +124,19 @@ npm run dev -- --host 0.0.0.0
 - `GET /api/profiles/:id`, `GET /api/profiles/:id/recipes` — 다른 사용자 프로필 (명세서에 없음), 소개글 `bio` 컬럼
 - 프로필 사진: Supabase Storage `avatars` 공개 버킷 + 본인 폴더(`{user_id}/`)만 업로드 허용 정책. 프론트가 직접 올리고 주소를 `PATCH /api/profiles/me` 의 `avatar_url` 로 보냄
 - 거주지역은 `region_code`(행정코드 5자리, 예: 안동시 `47170`)로 보냄 — 목록은 `src/lib/regions.ts`
+
+### 지역 지도 (`/map`)
+
+- **지도 두 가지**: `VITE_KAKAO_MAP_KEY` 가 있으면 카카오맵 위에 시·군 경계를 겹쳐 그리고, 없거나 불러오기에 실패하면 키 없이 동작하는 SVG 지도로 보여줍니다. 둘 다 탭으로 지역 선택, 확대·축소, 레시피 수에 따른 색 구분, 선택 지역 마커를 지원합니다.
+- **카카오 키**: [Kakao Developers](https://developers.kakao.com) › 내 애플리케이션 › 앱 키의 **JavaScript 키**. 플랫폼 › Web 에 `http://localhost:5173` 과 배포 주소를 등록해야 SDK 가 열립니다.
+- **경계 데이터**: `public/geo/daegu-gyeongbuk.geojson` — 통계청 SGIS 행정동 경계(공공누리 제1유형)를 가공한 [vuski/admdongkor](https://github.com/vuski/admdongkor) ver20261001(CC BY 4.0)에서 대구는 하나(27000, 2023년 편입된 군위군 포함), 경북은 22개 시·군으로 합쳐 단순화한 파일입니다. 출처 표시는 지도 오른쪽 위에 있습니다.
+- **SVG 좌표**: 경계 파일을 바꾸면 `npm run map:shapes` 로 `src/features/map/mapShapes.ts` 를 다시 만듭니다. 울릉도·독도는 실제 위치가 멀어서 왼쪽 위 상자에 당겨 그립니다.
+- **코드 규칙**: 지역은 온보딩과 같은 행정표준코드 5자리(`src/lib/regions.ts`). 서버가 대구를 구·군 코드(27110 등)로 보내도 지도에서는 대구 하나로 합칩니다.
+
+### 백엔드에 요청할 것 (지도)
+
+- `GET /api/map/regions` — 응답에 `region_code` 포함, 레시피가 0개인 지역도 포함 (색 구분·빈 지역 안내용)
+- `GET /api/map/regions/:region_code/recipes?limit=10` — `:region_code` 는 지역 이름이 아니라 코드(예: `47170`), 인기순(좋아요+저장) 정렬, 공개 발행 레시피만
+- 대구는 지도·온보딩 모두 `27000` 하나로 다룸 → 레시피 지역도 같은 코드 체계로 저장 (구 코드로 저장하면 프론트에서 27000 으로 합침)
+- 데모 시드: 여러 시·군에 공개 레시피를 넣어 빈 지도가 되지 않게 (mock 예시: `src/lib/mock/mockMap.ts`)
+
