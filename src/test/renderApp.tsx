@@ -38,7 +38,6 @@ export function loginAsNewUser(withProfile = false) {
   if (withProfile) {
     db.profiles[userId] = {
       id: userId,
-      role: 'transmitter',
       display_name: '새내기',
       avatar_url: null,
       region: null,

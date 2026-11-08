@@ -28,7 +28,6 @@ function seed(): MockDb {
     profiles: {
       [userId]: {
         id: userId,
-        role: 'transmitter',
         display_name: '김한술',
         avatar_url: null,
         region: { code: '47170', sido: '경상북도', sigungu: '안동시', dong: null },

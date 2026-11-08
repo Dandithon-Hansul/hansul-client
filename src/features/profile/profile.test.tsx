@@ -78,12 +78,17 @@ describe('프로필 편집', () => {
 })
 
 describe('다른 사용자 프로필', () => {
-  it('전승자 정보와 레시피를 보여주고 편집 버튼은 없다', async () => {
+  it('마이페이지와 같은 모양으로 보여주되 프로필 편집 버튼은 없다', async () => {
     loginAsDemo()
     renderApp('/users/u-kim-hansul')
-    expect(await screen.findByText('안녕하세요 여러분ㅎㅎ 같이 레시피 공유해봐요~')).toBeInTheDocument()
-    expect(screen.getByText('대구광역시')).toBeInTheDocument()
+    expect(await screen.findByText('김한술')).toHaveClass('profile-name')
+    expect(screen.getByText('대구광역시')).toHaveClass('profile-region')
+    expect(screen.getByText('안녕하세요 여러분ㅎㅎ 같이 레시피 공유해봐요~')).toBeInTheDocument()
+    // 숫자: 전승한 레시피·받은 좋아요 (저장 수는 본인만 볼 수 있어 없음)
+    expect(screen.getAllByRole('term').map((item) => item.textContent)).toEqual(['전승한 레시피', '받은 좋아요 수'])
     expect(screen.getAllByRole('definition').map((item) => item.textContent)).toEqual(['5', '63'])
+    expect(screen.getByRole('tab', { name: '전승한 레시피' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tab', { name: '저장한 맛' })).not.toBeInTheDocument()
     expect(await screen.findByRole('link', { name: '누른 국수' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '프로필 편집' })).not.toBeInTheDocument()
   })

@@ -4,7 +4,7 @@ import './App.css'
 import { isFeaturePage, pathOf, recipePath, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
-import { DEFAULT_ROLE, setupProfile } from './lib/api/profile'
+import { setupProfile } from './lib/api/profile'
 import { markProfileReady } from './lib/api/profileStatus'
 import { findRegionByCode, findRegionByText, formatRegion } from './lib/regions'
 import { useAuth } from './features/auth/auth-context'
@@ -67,7 +67,6 @@ function App({ splashMs }: { splashMs?: number }) {
       display_name: name.trim(),
       region_code: regionCode || null, // 지역 건너뛰면 null
       food_preferences: favoriteFoods,
-      role: DEFAULT_ROLE,
     })
     markProfileReady(session?.userId) // 이제 프로필이 있으니 홈 등에 들어갈 수 있음
     // 홈 화면이 아직 API 대신 이 값으로 이름을 보여줘서 함께 저장 (홈 API 연결 후 제거)
