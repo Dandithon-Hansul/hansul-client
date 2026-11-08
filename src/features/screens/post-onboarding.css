@@ -9,30 +9,54 @@
   .feature-kicker { @apply mb-2.5 text-xs font-semibold tracking-[.5px] text-terra; }
   .record-view h2,.map-intro h2,.recipe-detail-content h2,.cook-page h2,.profile-summary h2 { @apply m-0 font-serif text-2xl leading-[1.5]; white-space: pre-line; }
   .feature-muted { @apply text-xs leading-[1.7] text-[#8e8a82]; }
-  .record-orb { @apply mx-auto mt-[52px] mb-[17px] grid h-[104px] w-[104px] cursor-pointer place-items-center rounded-full border-[8px] border-[#f8ece8] bg-[#b74731] text-white shadow-[0_0_0_2px_#fff,0_0_0_3px_#f1d8d0]; }
-  .record-orb svg { @apply h-[34px] w-[34px]; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .record-orb.is-recording { animation: pulse 1.2s ease-in-out infinite; }
-  .record-status { @apply min-h-[18px] text-[11px] text-[#9a938b]; }
-  .photo-upload { @apply mt-11 block w-full cursor-pointer border border-[#eae5dc] p-[14px] text-xs text-[#605c55]; }
+  .record-orb { @apply relative mx-auto mt-[52px] mb-[17px] grid h-[116px] w-[116px] cursor-pointer place-items-center rounded-full border-0 bg-[#b74731] text-white shadow-[0_0_0_2px_#fff,0_0_0_3px_#f1d8d0]; }
+  .record-orb svg { @apply h-[38px] w-[38px]; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .record-orb.is-recording { @apply bg-[#944832]; }
+  .record-orb.is-recording::before,.record-orb.is-recording::after { position: absolute; content: ''; border: 1px solid #efcfc4; border-radius: 50%; pointer-events: none; }
+  .record-orb.is-recording::before { inset: -12px; animation: record-ring-breathe 1.6s ease-in-out infinite; }
+  .record-orb.is-recording::after { inset: -24px; opacity: 0; animation: record-ring-alternate 1.6s steps(1,end) infinite; }
+  @keyframes record-ring-breathe { 0%,100% { transform: scale(.99); opacity: .75; } 50% { transform: scale(1.015); opacity: 1; } }
+  @keyframes record-ring-alternate { 0%,49% { opacity: 0; } 50%,100% { opacity: .7; } }
+  .record-status { @apply min-h-[38px] text-[12px] text-[#292824]; }
+  .record-status span { @apply mt-1 block text-[13px] text-terra; }
+  .record-guidance { @apply mt-[58px] bg-[#f0ebe2] px-4 py-4 text-center text-[#817b71]; }
+  .record-guidance small { @apply text-[11px] text-[#514e48]; }
+  .record-guidance p { @apply mb-0 mt-2 font-serif text-[13px] leading-[1.55]; }
+  .record-view .photo-upload { @apply mt-8 flex h-16 w-full cursor-pointer items-center justify-center rounded-[3px] border border-[#ded9d0] bg-white p-3 text-center text-[20px] font-normal leading-none text-[#605c55]; margin-top: 32px; }
+  .record-view .record-photo-button.is-active { border-color: #50604b; background-color: #50604b !important; color: white; }
+  .record-view .record-photo-button,.record-finish { transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }
+  .record-view .record-photo-button:hover,.record-view .record-photo-button:focus-visible,.record-finish:hover:not(:disabled),.record-finish:focus-visible { border-color: #50604b; background-color: #50604b !important; color: white; }
+  .record-transcript { @apply mt-4 block text-left text-xs text-[#605c55]; }
+  .record-transcript p { @apply mb-0 mt-2 text-sm leading-[1.6] text-[#514e48]; }
+  .record-finish { @apply mt-2 h-16 min-h-16 w-full justify-center rounded-[3px] border border-[#ded9d0] bg-white p-3 text-center text-[20px] font-normal leading-none text-[#605c55]; margin-top: 8px; }
+  .record-finish:disabled { @apply cursor-not-allowed; }
   .photo-upload input { @apply hidden; }
   .feature-primary { @apply mt-5 flex min-h-12 w-full cursor-pointer items-center justify-between rounded-[3px] border-0 bg-brand-muted px-4 text-left text-[13px] font-semibold text-white; }
   .feature-primary span { @apply text-[19px]; }
-  .chat-page { @apply flex flex-col pb-[calc(env(safe-area-inset-bottom)+174px)]; }
-  .chat-context { @apply pt-4; }
+  .chat-page { @apply flex h-svh flex-col overflow-hidden bg-[#f5f2eb] pb-[calc(env(safe-area-inset-bottom)+174px)]; }
+  .chat-context { @apply shrink-0 pt-4; }
   .chat-context>span { @apply text-[11px] text-terra; }
   .chat-context h2 { @apply my-[7px] mb-[18px] font-serif text-xl leading-[1.4]; }
-  .chat-messages { @apply flex flex-col gap-[14px] overflow-auto; }
+  .chat-messages { @apply flex min-h-0 flex-1 flex-col gap-[14px] overflow-y-auto overscroll-contain; }
   .chat-bubble { @apply flex max-w-[90%] items-start gap-2; }
-  .chat-bubble img { @apply mt-[3px] h-[23px] w-[25px] object-contain; }
+  .chat-bubble img { @apply mt-[3px] h-9 w-9 rounded-full bg-[#50604b] p-1.5 object-contain; }
   .chat-bubble p { @apply m-0 rounded-[10px] bg-[#f3f0e8] p-3 text-xs leading-[1.6] text-[#514e48]; }
   .chat-bubble.user { @apply self-end; }
   .chat-bubble.user p { @apply bg-[#dfe5db]; }
-  .answer-options { @apply my-[14px] flex flex-wrap gap-[7px]; }
+  .answer-options { @apply my-3 flex max-h-[88px] shrink-0 flex-wrap gap-[7px] overflow-y-auto; }
+  .answer-options:empty { display: none; }
   .answer-options button { @apply cursor-pointer rounded-[18px] border border-[#e4e0d7] bg-white px-3 py-[9px] text-[11px] text-[#5b5e55]; }
-  .chat-compose { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] left-1/2 flex h-11 w-[min(calc(100%-44px),386px)] -translate-x-1/2 items-center gap-2 border border-[#e5e0d8] bg-white px-2.5; }
-  .chat-compose input { @apply min-w-0 flex-1 border-0 text-xs outline-none; }
-  .chat-compose button { @apply cursor-pointer border-0 bg-transparent text-lg text-terra; }
-  .chat-next { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 w-[min(calc(100%-44px),386px)] -translate-x-1/2; }
+  .answer-options button.is-selected { @apply border-[#50604b] bg-[#50604b] text-white; }
+  .chat-compose { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+28px)] left-1/2 flex h-[50px] w-[min(calc(100%-44px),386px)] -translate-x-1/2 items-center gap-2 border border-[#e5e0d8] bg-white px-3; }
+  .chat-compose input { @apply min-w-0 flex-1 border-0 bg-transparent text-[13px] outline-none; }
+  .chat-compose button { @apply grid h-8 w-8 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-1 text-terra; }
+  .chat-compose button svg { @apply h-5 w-5; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .chat-compose .chat-send svg { fill: currentColor; stroke: currentColor; }
+  .chat-compose .chat-mic.is-recording { @apply rounded-full bg-[#f8ece8]; animation: record-ring-breathe 1.6s ease-in-out infinite; }
+  .chat-compose button:disabled { @apply cursor-not-allowed opacity-50; }
+  .chat-image-upload { @apply cursor-pointer text-lg text-[#817b71]; }
+  .chat-next { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+78px)] left-1/2 w-auto -translate-x-1/2 justify-center border-0 bg-transparent px-2 py-1 text-[12px] font-normal text-[#aaa398] underline underline-offset-2; min-height: 30px; }
+  .chat-next span { @apply hidden; }
   .recipe-page { @apply px-0 pt-[calc(env(safe-area-inset-top)+104px)]; }
   .recipe-page .feature-header { @apply left-[22px] right-[22px]; }
   .recipe-detail-image { @apply block h-[260px] w-full object-cover; }

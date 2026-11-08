@@ -110,7 +110,7 @@ role은 transmitter 또는 learner이다.
 지원 브라우저에서는 Web Speech API SpeechRecognition으로 실시간 transcript를 표시한다.
 MediaRecorder로 원본 음성을 동시에 보관하고, 미지원·실패 시 /api/stt Whisper fallback을 호출한다.
 녹음 버튼은 Siri 스타일의 활성 파형·타이머·일시정지 상태를 표시한다.
-사용자는 녹음 전 음식 사진을 첨부하고, transcript를 텍스트로 직접 보정할 수 있다.
+사용자는 녹음 전에 음식 사진을 첨부할 수 있다. 전사 결과는 화면에 표시한다.
 확인 질문은 선택형과 자유 텍스트를 함께 제공한다. 음성 답변은 /api/stt로 변환한 뒤 /api/chat 메시지로 전달한다.
 0-2. 홈 피드·검색
 GET /api/home?limit=10
@@ -169,7 +169,7 @@ POST /api/uploads/sign (인증 필요, JSON)
 서버는 목적과 권한을 검사하고 비공개 버킷의 {user_id}/{purpose}/{uuid}.{ext} 경로에 업로드 토큰을 발급한다. STT 최초 호출과 평가 사진을 제외한 용도에는 대상 레시피 ID가 필요하며 작성자만 발급받을 수 있다. 평가 사진은 평가 가능한 레시피에만 연결할 수 있다.
 브라우저는 Supabase uploadToSignedUrl(path, token, file)로 파일을 올리고 후속 API에 경로를 보낸다. 서버는 버킷·용도·소유자·대상에 대한 발급 기록과 실제 객체 크기 및 형식을 확인한 뒤 사용한다. 전승 음성·완성 사진은 권한 확인 후 읽기용 서명 URL로 응답한다.
 1. STT
-두 입력 중 하나만 보낸다. audio_path는 서버에서 전사하고, transcript는 브라우저 전사 또는 직접 수정한 텍스트를 사용한다. 최초 성공 시 작성자 소유 비공개 초안을 생성하며, recipe_id가 있으면 작성자 소유 초안만 갱신한다. 원본 녹음 경로는 서버에 저장한다.
+두 입력 중 하나만 보낸다. audio_path는 서버에서 전사하고, transcript는 브라우저에서 전사한 텍스트를 사용한다. 최초 성공 시 작성자 소유 비공개 초안을 생성하며, recipe_id가 있으면 작성자 소유 초안만 갱신한다. 원본 녹음 경로는 서버에 저장한다.
 
 POST /api/stt
 Content-Type: application/json

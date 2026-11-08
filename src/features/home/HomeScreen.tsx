@@ -1,18 +1,21 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getHomeFeed, searchRecipes, type HomeFeed, type RecipeSearchResult } from '../../lib/api/home'
+import { getRecommendations, type RecommendationItem } from '../../lib/api/recipes'
 import './home.css'
 
 type HomeScreenProps = {
   name: string
   onNavigate: (destination: 'home' | 'record' | 'map' | 'profile' | 'monthly' | 'recipe') => void
+  onRecipeSelect: (recipeId: string) => void
 }
 
 function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 5 5" /></svg>
 }
 
-function HomeScreen({ name, onNavigate }: HomeScreenProps) {
+function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
   const [feed, setFeed] = useState<HomeFeed | null>(null)
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([])
   const [feedError, setFeedError] = useState('')
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
@@ -27,6 +30,9 @@ function HomeScreen({ name, onNavigate }: HomeScreenProps) {
     }).catch(() => {
       if (active) setFeedError('홈 정보를 불러오지 못했어요.')
     })
+    getRecommendations().then((data) => {
+      if (active) setRecommendations(data.recipes)
+    }).catch(() => { /* 통합 홈 응답의 추천 목록을 fallback으로 사용 */ })
     return () => { active = false }
   }, [])
 
@@ -54,7 +60,7 @@ function HomeScreen({ name, onNavigate }: HomeScreenProps) {
   }
 
   const topRecipe = feed?.top_recipes[0]
-  const recommended = feed?.recommended[0]
+  const recommended = recommendations[0] ?? feed?.recommended[0]
 
   return (
     <div className="home-page">
@@ -81,7 +87,7 @@ function HomeScreen({ name, onNavigate }: HomeScreenProps) {
         <section className="home-search-results" aria-live="polite">
           <h2>‘{submittedQuery}’ 검색 결과</h2>
           {searching ? <p>검색 중…</p> : searchError ? <p role="alert">{searchError}</p> : results.length ? results.map((recipe) => (
-            <button className="home-search-result" type="button" key={recipe.recipe_id} onClick={() => onNavigate('recipe')}>
+            <button className="home-search-result" type="button" key={recipe.recipe_id} onClick={() => onRecipeSelect(recipe.recipe_id)}>
               {recipe.hero_image_url && <img src={recipe.hero_image_url} alt="" />}
               <span><b>{recipe.title}</b><small>{recipe.region_tag} · {recipe.transmitter_name} 전승자</small></span>
             </button>
@@ -101,7 +107,7 @@ function HomeScreen({ name, onNavigate }: HomeScreenProps) {
             <button className="section-heading" type="button" onClick={() => onNavigate('monthly')}>
               <span>이달의 전승 음식</span><span className="section-arrow" aria-hidden="true">›</span>
             </button>
-            {topRecipe ? <button className="recipe-feature" type="button" onClick={() => onNavigate('recipe')}>
+            {topRecipe ? <button className="recipe-feature" type="button" onClick={() => onRecipeSelect(topRecipe.recipe_id)}>
               {topRecipe.hero_image_url && <img src={topRecipe.hero_image_url} alt="" />}
               <span className="recipe-gradient" />
               <span className="recipe-title">{String(topRecipe.rank ?? 1).padStart(2, '0')} {topRecipe.title}</span>
@@ -110,7 +116,7 @@ function HomeScreen({ name, onNavigate }: HomeScreenProps) {
 
           <section className="recipe-section recommendation-section">
             <h2>{(feed?.greeting_name || name || '한술')}님을 위한 추천 음식</h2>
-            {recommended ? <button className="recipe-feature recommendation-card" type="button" onClick={() => onNavigate('recipe')}>
+            {recommended ? <button className="recipe-feature recommendation-card" type="button" onClick={() => onRecipeSelect(recommended.recipe_id)}>
               {recommended.hero_image_url && <img src={recommended.hero_image_url} alt="" />}
               <span className="recipe-gradient" />
               {recommended.region_tag && <span className="recipe-location">{recommended.region_tag}</span>}

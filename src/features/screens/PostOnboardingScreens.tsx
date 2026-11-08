@@ -1,47 +1,215 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
+import { analyzeRecipe, attachStepPhoto, createRecipe, evaluateRecipe, generateStepImages, getRecipe, getRecipes, regenerateStepImage, sendRecipeChat, toggleRecipe, transcribe, uploadRecipeVoice, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
 import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
 
 type Props = { page: FeaturePage; name: string; region: string; favoriteFoods: string[]; onNavigate: (page: 'home' | FeaturePage) => void }
 
-const cookingSteps = [
-  { title: '재료 손질하기', body: '소고기는 키친타월로 핏물을 닦고, 무와 대파는 먹기 좋은 크기로 썰어주세요.' },
-  { title: '소고기 볶기', body: '냄비에 참기름을 두르고 소고기를 넣어 겉면이 익을 때까지 볶아주세요.' },
-  { title: '무 넣고 끓이기', body: '무와 물을 넣고 끓이면서 떠오르는 거품을 걷어내 주세요.' },
-  { title: '고춧가루 넣고 끓이기', body: '고춧가루와 대파를 넣고 약불에서 재료가 부드러워질 때까지 끓여요.' },
-]
-
 function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return <header className="feature-header"><button type="button" onClick={onBack} aria-label="뒤로">‹</button><h1>{title}</h1><span /></header>
 }
 
 function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }: Props) {
+  const navigate = useNavigate()
   const [recording, setRecording] = useState(false)
-  const [chatIndex, setChatIndex] = useState(0)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const [recordPhoto, setRecordPhoto] = useState<File | null>(null)
   const [draft, setDraft] = useState('')
+  const [chatVoiceRecording, setChatVoiceRecording] = useState(false)
+  const [selectedSuggestion, setSelectedSuggestion] = useState('')
+  const [chatImagePath, setChatImagePath] = useState<string | undefined>()
   const [messages, setMessages] = useState<Array<{ from: 'ai' | 'user'; text: string }>>([
     { from: 'ai', text: '오늘은 어떤 음식의 이야기를 남겨볼까요?' },
   ])
   const [mapRegion, setMapRegion] = useState('대구광역시')
   const [cookStep, setCookStep] = useState(0)
-  const suggestions = [
-    ['안동 찜닭', '대구식 육개장', '소고기 뭇국'],
-    ['어릴 때 먹던 맛이에요', '가족 모임 때 만들어요', '직접 이야기할게요'],
-    ['할머니에게 배웠어요', '명절마다 만들어요', '우리 집만의 비법이 있어요'],
-  ]
+  const [searchParams] = useSearchParams()
+  const [draftId, setDraftId] = useState('')
+  const [transcript, setTranscript] = useState('')
+  const [recordError, setRecordError] = useState('')
+  const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
+  const [monthlyRecipes, setMonthlyRecipes] = useState<RecipeListItem[]>([])
+  const [screenError, setScreenError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [evaluationText, setEvaluationText] = useState('')
+  const mediaRecorder = useRef<MediaRecorder | null>(null)
+  const mediaStream = useRef<MediaStream | null>(null)
+  const chatMediaRecorder = useRef<MediaRecorder | null>(null)
+  const chatMediaStream = useRef<MediaStream | null>(null)
+  const recipeId = searchParams.get('id') || draftId || 'r-daegu-yukgaejang'
+  useEffect(() => {
+    if (page === 'recipe' || page === 'cook') {
+      let active = true
+      getRecipe(recipeId).then((data) => { if (active) setRecipe(data) }).catch(() => { if (active) setScreenError('레시피를 불러오지 못했어요.') })
+      return () => { active = false }
+    }
+    if (page === 'monthly') {
+      let active = true
+      getRecipes().then((data) => { if (active) setMonthlyRecipes(data.recipes) }).catch(() => { if (active) setScreenError('레시피 목록을 불러오지 못했어요.') })
+      return () => { active = false }
+    }
+    return undefined
+  }, [page, recipeId])
 
-  function answer(text: string) {
-    const next = chatIndex + 1
-    setMessages((current) => [...current, { from: 'user', text }, { from: 'ai', text: next >= 3 ? '소중한 기억이네요. 이제 레시피로 정리해 볼게요.' : ['그 음식은 누구와 함께 드셨나요?', '그 음식에 꼭 들어가는 재료가 있나요?'][Math.min(next - 1, 1)] }])
-    setChatIndex(next)
+  useEffect(() => () => mediaStream.current?.getTracks().forEach((track) => track.stop()), [])
+  useEffect(() => () => chatMediaStream.current?.getTracks().forEach((track) => track.stop()), [])
+
+  useEffect(() => {
+    if (!recording) return undefined
+    const timer = window.setInterval(() => setRecordingSeconds((seconds) => seconds + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [recording])
+
+  async function toggleRecording() {
+    setRecordError('')
+    if (mediaRecorder.current?.state === 'recording') { mediaRecorder.current.pause(); setRecording(false); return }
+    if (mediaRecorder.current?.state === 'paused') { mediaRecorder.current.resume(); setRecording(true); return }
+    try {
+      setRecordingSeconds(0)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      mediaStream.current = stream
+      const recorder = new MediaRecorder(stream)
+      const chunks: BlobPart[] = []
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data) }
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        const file = new File([new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })], 'recording.webm', { type: recorder.mimeType || 'audio/webm' })
+        void (async () => {
+          setBusy(true)
+          try {
+            const signed = await uploadSignedFile(file, 'stt_audio')
+            const result = await transcribe({ audio_path: signed.path })
+            setTranscript(result.transcript)
+            setDraftId(result.recipe_id)
+            if (recordPhoto) {
+              const photo = await uploadSignedFile(recordPhoto, 'chat_image', result.recipe_id)
+              setChatImagePath(photo.path)
+              setRecordPhoto(null)
+            }
+          } catch { setRecordError('음성을 전사하지 못했어요. 다시 녹음해 주세요.') }
+          finally { setBusy(false) }
+        })()
+      }
+      mediaRecorder.current = recorder
+      recorder.start()
+      setRecording(true)
+    } catch { setRecordError('마이크를 사용할 수 없어요. 브라우저 권한을 확인해 주세요.') }
+  }
+
+  function finishRecording() {
+    const recorder = mediaRecorder.current
+    if (recorder && recorder.state !== 'inactive') {
+      recorder.stop()
+      setRecording(false)
+    }
+  }
+
+  async function continueToChat() {
+    if (!draftId) return
+    setBusy(true)
+    setScreenError('')
+    try {
+      const result = await analyzeRecipe(draftId)
+      setAnalysis(result)
+      if (result.questions.length) {
+        setMessages([{ from: 'ai', text: result.questions[0].question }])
+      } else {
+        setMessages([{ from: 'ai', text: transcript || '이 음식 이야기를 조금 더 들려주세요.' }])
+      }
+    } catch {
+      setMessages([{ from: 'ai', text: '이 음식에 대해 더 자세히 이야기해 주세요.' }])
+      setScreenError('질문을 불러오지 못했어요. 메시지를 보내면 대화를 이어갈 수 있어요.')
+    } finally {
+      setBusy(false)
+      onNavigate('chat')
+    }
+  }
+
+  async function sendChatMessage(message: string) {
+    const recipe_id = draftId || 'draft-mock'
+    setMessages((current) => [...current, { from: 'user', text: message }])
+    setSelectedSuggestion(message)
+    setDraft('')
+    setBusy(true)
+    try {
+      let answerText = ''
+      await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: false }, (event) => {
+        if (event.event === 'chunk' && typeof event.data.text === 'string') {
+          answerText += event.data.text
+          setMessages((current) => {
+            const withoutPending = current.at(-1)?.from === 'ai' && current.at(-1)?.text === '답변을 작성하고 있어요…' ? current.slice(0, -1) : current
+            return [...withoutPending, { from: 'ai', text: answerText }]
+          })
+        }
+        if (event.event === 'error') setScreenError(String(event.data.message ?? '채팅 처리 중 오류가 발생했어요.'))
+      })
+      if (analysis?.questions.length) {
+        const nextAnalysis = await analyzeRecipe(recipe_id)
+        setAnalysis(nextAnalysis)
+        const nextQuestion = nextAnalysis.questions[0]?.question
+        if (nextQuestion && !answerText.includes(nextQuestion)) {
+          setMessages((current) => [...current, { from: 'ai', text: nextQuestion }])
+        }
+      }
+      setChatImagePath(undefined)
+    } catch { setScreenError('메시지를 보내지 못했어요.') }
+    finally { setBusy(false) }
+  }
+
+  async function toggleChatVoice() {
+    if (chatMediaRecorder.current?.state === 'recording') {
+      chatMediaRecorder.current.stop()
+      setChatVoiceRecording(false)
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      chatMediaStream.current = stream
+      const recorder = new MediaRecorder(stream)
+      const chunks: BlobPart[] = []
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data) }
+      recorder.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop())
+        const file = new File([new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })], 'chat-recording.webm', { type: recorder.mimeType || 'audio/webm' })
+        void (async () => {
+          setBusy(true)
+          try {
+            const signed = await uploadSignedFile(file, 'stt_audio', draftId || undefined)
+            const result = await transcribe({ audio_path: signed.path, ...(draftId ? { recipe_id: draftId } : {}) })
+            if (result.transcript) setDraft(result.transcript)
+          } catch { setScreenError('음성을 전사하지 못했어요.') }
+          finally { setBusy(false) }
+        })()
+      }
+      chatMediaRecorder.current = recorder
+      recorder.start()
+      setChatVoiceRecording(true)
+    } catch { setScreenError('마이크를 사용할 수 없어요. 브라우저 권한을 확인해 주세요.') }
+  }
+
+  async function analyzeAndPublish() {
+    setBusy(true); setScreenError('')
+    try {
+      const result = await analyzeRecipe(draftId || 'draft-mock')
+      setAnalysis(result)
+      if (result.questions.length) {
+        setMessages((current) => [...current, { from: 'ai', text: result.questions.map((item) => item.question).join('\n') }])
+        return
+      }
+      const published = await createRecipe(draftId || 'draft-mock')
+      setDraftId(published.recipe_id)
+      navigate(`/recipe?id=${encodeURIComponent(published.recipe_id)}`)
+    } catch { setScreenError('레시피 분석 또는 발행에 실패했어요.') }
+    finally { setBusy(false) }
   }
 
   function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!draft.trim()) return
-    answer(draft.trim())
-    setDraft('')
+    if (!draft.trim() || busy) return
+    void sendChatMessage(draft.trim())
   }
 
   if (page === 'record') return (
@@ -49,14 +217,17 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       <PageHeader title="AI 음성 기록" onBack={() => onNavigate('home')} />
       <div className="record-view">
         <p className="feature-kicker">우리 집 손맛 기록</p>
-        <h2>{recording ? '이야기를 듣고 있어요' : '음식 이야기를\n들려주세요'}</h2>
-        <p className="feature-muted">{recording ? '편하게 말씀해 주세요. 녹음은 이 기기에서만 진행돼요.' : '버튼을 눌러 가족의 음식 이야기를 시작해 보세요.'}</p>
-        <button className={`record-orb ${recording ? 'is-recording' : ''}`} type="button" onClick={() => setRecording((value) => !value)} aria-label={recording ? '녹음 일시정지' : '녹음 시작'}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg>
+        <h2>어떤 음식의 이야기를<br />남겨볼까요?</h2>
+        <p className="feature-muted">평소 요리하듯 편안하게 이야기해 주세요.<br />AI가 레시피의 재료와 순서를 정리해 드려요.</p>
+        <button className={`record-orb ${recording ? 'is-recording' : ''}`} type="button" onClick={() => void toggleRecording()} aria-label={recording ? '녹음 일시정지' : mediaRecorder.current?.state === 'paused' ? '녹음 다시 시작' : '녹음 시작'} disabled={busy}>
+          {recording ? <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M7 23v-6m6 12V12m6 18V9m6 21V13m6 12v-7"/><path d="m33 4 1.4 3.2L38 9l-3.6 1.5L33 14l-1.5-3.5L28 9l3.5-1.8L33 4Z"/></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg>}
         </button>
-        <p className="record-status">{recording ? '녹음 중 · 00:12' : '마이크 버튼을 눌러 이야기를 시작하세요'}</p>
-        <label className="photo-upload">음식 사진 추가하기<input type="file" accept="image/*" /></label>
-        <button className="feature-primary" type="button" onClick={() => onNavigate('chat')}>이야기 마치고 다음으로 <span>→</span></button>
+        <p className="record-status">{recording ? '버튼을 누르면 녹음이 일시정지됩니다' : mediaRecorder.current?.state === 'paused' ? '버튼을 다시 누르면 녹음이 이어집니다' : busy ? '음성을 전사하고 있어요…' : '버튼을 눌러 이야기를 시작하세요'}<span>{String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}</span></p>
+        {recordError && <p role="alert">{recordError}</p>}
+        <div className="record-guidance"><small>이렇게 시작해 보세요</small><p>“오늘은 우리 집에서 40년 동안 만들어 온<br />소고기국 레시피를 알려줄게요.”</p></div>
+        <label className={`photo-upload record-photo-button ${recordPhoto ? 'is-active' : ''}`}>{recordPhoto ? '사진이 추가됐어요' : '음식 사진 먼저 추가하기'}<input type="file" accept="image/*" onChange={(event) => setRecordPhoto(event.target.files?.[0] ?? null)} /></label>
+        {transcript && <div className="record-transcript" aria-live="polite"><span>음성 전사</span><p>{transcript}</p></div>}
+        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else void continueToChat() }}>기록 마무리 하기</button>
       </div>
     </main>
   )
@@ -68,31 +239,33 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       <div className="chat-messages" aria-live="polite">
         {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={`${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
       </div>
-      {chatIndex < 3 && <div className="answer-options">{suggestions[Math.min(chatIndex, 2)].map((suggestion) => <button type="button" key={suggestion} onClick={() => answer(suggestion)}>{suggestion}</button>)}</div>}
-      <form className="chat-compose" onSubmit={sendMessage}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="메시지를 입력해 주세요" aria-label="메시지" /><button type="submit" aria-label="전송">➤</button></form>
-      {chatIndex >= 2 && <button className="feature-primary chat-next" type="button" onClick={() => onNavigate('recipe')}>레시피 만들러 가기 <span>→</span></button>}
+      {screenError && <p role="alert">{screenError}</p>}
+      <div className="answer-options" aria-label="추천 답변">{(analysis?.questions[0]?.options ?? []).map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}</div>
+      <form className="chat-compose" onSubmit={sendMessage}><button className={`chat-mic ${chatVoiceRecording ? 'is-recording' : ''}`} type="button" aria-label={chatVoiceRecording ? '음성 입력 마치기' : '음성 입력'} onClick={() => void toggleChatVoice()} disabled={busy}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="메시지를 입력해 주세요" aria-label="메시지" /><button className="chat-send" type="submit" aria-label="전송" disabled={busy || !draft.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></svg></button></form>
+      <button className="feature-primary chat-next" type="button" disabled={busy || !draftId} onClick={() => void analyzeAndPublish()}>{busy ? '정리하고 있어요…' : '레시피 만들러 가기 →'}</button>
+      {analysis && <p className="feature-muted">재료 {analysis.structured.ingredients.length}개 · 조리 단계 {analysis.structured.steps.length}개를 분석했어요.</p>}
+      <button type="button" disabled={busy} onClick={() => { setBusy(true); void vectorizeSensoryProfile().then(() => setScreenError('손맛 프로파일을 업데이트했어요.')).catch(() => setScreenError('감각 기록이 더 쌓인 뒤 다시 시도해주세요.')).finally(() => setBusy(false)) }}>손맛 프로파일 업데이트</button>
     </main>
   )
 
   if (page === 'recipe') return (
     <main className="feature-page recipe-page">
       <PageHeader title="레시피 상세" onBack={() => onNavigate('home')} />
-      <img className="recipe-detail-image" src="/images/daegu-yukgaejang.png" alt="대구식 육개장" />
-      <div className="recipe-detail-content"><p className="feature-kicker">대구 향토음식 · 전승 레시피</p><h2>대구식 육개장</h2><p className="feature-muted">김한술 전승자 · 대구광역시</p><div className="recipe-stats"><span>♡ 162</span><span>◉ 102</span><span>조리 시간 40분</span></div><h3>우리 집 손맛을 담은 레시피</h3><p>소고기와 대파를 넉넉히 넣고 얼큰하게 끓이는 대구식 육개장입니다.</p><button className="feature-primary" type="button" onClick={() => { setCookStep(0); onNavigate('cook') }}>단계별로 따라 만들기 <span>→</span></button></div>
+      {screenError && <p role="alert">{screenError}</p>}
+      {recipe && <><img className="recipe-detail-image" src={recipe.hero_image_url ?? ''} alt={recipe.title} />
+      <div className="recipe-detail-content"><p className="feature-kicker">{recipe.transmitter_name} 전승 레시피</p><h2>{recipe.title}</h2><p className="feature-muted">{recipe.context_summary}</p><div className="recipe-stats"><button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'like').then((value) => setRecipe({ ...recipe, is_liked: value.liked, like_count: value.like_count }))}>{recipe.is_liked ? '♥' : '♡'} {recipe.like_count}</button><button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'save').then((value) => setRecipe({ ...recipe, is_saved: value.saved, save_count: value.save_count }))}>{recipe.is_saved ? '저장됨' : '저장'} · {recipe.save_count}</button><span>조리 시간 {recipe.cooking_time}분</span></div><label className="photo-upload">전승자 한 마디 음성 추가<input type="file" accept="audio/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void uploadSignedFile(file, 'card_voice', recipe.recipe_id).then((signed) => uploadRecipeVoice(recipe.recipe_id, signed.path)).catch(() => setScreenError('음성을 업로드하지 못했어요.')) }} /></label><h3>재료</h3><ul>{recipe.ingredients.map((item) => <li key={item.name}>{item.name} {item.amount ?? ''}{item.unit ?? ''}</li>)}</ul><h3>조리 순서</h3><ol>{recipe.steps.map((step) => <li key={step.order}>{step.title}: {step.description}</li>)}</ol><button className="feature-primary" type="button" onClick={() => { setCookStep(0); onNavigate('cook') }}>단계별로 따라 만들기 <span>→</span></button></div></>}
     </main>
   )
 
   if (page === 'cook') {
-    const step = cookingSteps[cookStep]
-    return <main className="feature-page cook-page"><PageHeader title={`대구식 육개장 · ${cookStep + 1}단계`} onBack={() => onNavigate('recipe')} /><div className="cook-progress"><span style={{ width: `${((cookStep + 1) / cookingSteps.length) * 100}%` }} /></div><p className="feature-kicker">{cookStep + 1} / {cookingSteps.length} 단계</p><h2>{step.title}</h2><img className="cook-image" src={cookStep === 0 ? '/images/andong-jjimdak.png' : '/images/daegu-yukgaejang.png'} alt="조리 재료" /><p className="cook-description">{step.body}</p><div className="cook-ai-tip">✦ 한술의 팁<br /><span>재료의 크기를 비슷하게 맞추면 고르게 익어요.</span></div><div className="cook-controls">{cookStep > 0 && <button type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}<button className="feature-primary" type="button" onClick={() => cookStep === cookingSteps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === cookingSteps.length - 1 ? '요리 끝내기' : '다음 단계'} <span>→</span></button></div></main>
+    const steps = recipe?.steps ?? []
+    const step = steps[cookStep]
+    if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => onNavigate('recipe')} /><p>{screenError || '조리 단계를 불러오는 중…'}</p></main>
+    return <main className="feature-page cook-page"><PageHeader title={`${recipe?.title ?? '레시피'} · ${cookStep + 1}단계`} onBack={() => onNavigate('recipe')} /><div className="cook-progress"><span style={{ width: `${((cookStep + 1) / steps.length) * 100}%` }} /></div><p className="feature-kicker">{cookStep + 1} / {steps.length} 단계</p><h2>{step.title}</h2>{step.image_url && <img className="cook-image" src={step.image_url} alt="조리 단계" />}<p className="cook-description">{step.description}</p>{step.tip && <div className="cook-ai-tip">✦ 한술의 팁<br /><span>{step.tip}</span></div>}<div className="cook-controls">{cookStep > 0 && <button type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}<button type="button" disabled={busy} onClick={() => { setBusy(true); void generateStepImages(recipe!.recipe_id).then((result) => setRecipe({ ...recipe!, steps: recipe!.steps.map((item) => { const image = result.generated.find((generated) => generated.order === item.order); return image ? { ...item, image_url: image.image_url } : item }) })).catch(() => setScreenError('단계 이미지를 만들지 못했어요.')).finally(() => setBusy(false)) }}>단계 이미지 만들기</button>{step.order < steps.length - 1 && <button type="button" disabled={busy} onClick={() => { setBusy(true); void regenerateStepImage(recipe!.recipe_id, step.order).then((image) => setRecipe({ ...recipe!, steps: recipe!.steps.map((item) => item.order === step.order ? { ...item, image_url: image.image_url } : item) })).catch(() => setScreenError('이미지를 다시 만들지 못했어요.')).finally(() => setBusy(false)) }}>이 단계 이미지 재생성</button>}<button className="feature-primary" type="button" onClick={() => cookStep === steps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === steps.length - 1 ? '요리 끝내기' : '다음 단계'} <span>→</span></button></div>{cookStep === steps.length - 1 && <div><label className="photo-upload">완성 사진 추가<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void uploadSignedFile(file, 'step_photo', recipe!.recipe_id).then((signed) => attachStepPhoto(recipe!.recipe_id, step.order, signed.path)).then((result) => setRecipe({ ...recipe!, steps: recipe!.steps.map((item) => item.order === step.order ? { ...item, image_url: result.image_url } : item) })).catch(() => setScreenError('완성 사진을 업로드하지 못했어요.')) }} /></label><p>요리는 어떠셨나요?</p><select aria-label="전체 만족도"><option value="3">만족</option><option value="2">보통</option><option value="1">아쉬움</option></select><button type="button" disabled={busy} onClick={() => { setBusy(true); setEvaluationText(''); void evaluateRecipe({ recipe_id: recipe!.recipe_id, evaluation: { salt: 0, consistency: 0, doneness: 0, overall: 3, rule_followed: true } }, (event) => { if (typeof event.data.text === 'string') setEvaluationText((value) => value + event.data.text) }).catch(() => setEvaluationText('평가를 저장하지 못했어요.')).finally(() => setBusy(false)) }}>맛 평가 받기</button>{evaluationText && <p>{evaluationText}</p>}</div>}</main>
   }
 
   if (page === 'monthly') return (
-    <main className="feature-page"><PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} /><div className="food-list">{[
-      ['01', '안동 찜닭', '안동시 · 김한술 전승자', '/images/andong-jjimdak.png'],
-      ['02', '대구식 육개장', '대구광역시 · 박순덕 전승자', '/images/daegu-yukgaejang.png'],
-      ['03', '소고기 뭇국', '경상북도 · 이정희 전승자', '/images/daegu-yukgaejang.png'],
-    ].map(([rank, title, subtitle, image]) => <button className="food-list-card" type="button" key={rank} onClick={() => onNavigate('recipe')}><img src={image} alt="" /><span><b>{rank} {title}</b><small>{subtitle}</small></span><span>›</span></button>)}</div></main>
+    <main className="feature-page"><PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} />{screenError && <p role="alert">{screenError}</p>}<div className="food-list">{monthlyRecipes.map((item, index) => <button className="food-list-card" type="button" key={item.recipe_id} onClick={() => navigate(`/recipe?id=${encodeURIComponent(item.recipe_id)}`)}><img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" /><span><b>{String(index + 1).padStart(2, '0')} {item.title}</b><small>{item.region} · {item.transmitter_name} 전승자</small></span><span>›</span></button>)}</div></main>
   )
 
   if (page === 'map') return (
