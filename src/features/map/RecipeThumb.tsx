@@ -9,10 +9,10 @@ function toneOf(id: string) {
   return TONES[hash % TONES.length]
 }
 
-/** 레시피 대표 사진 (없으면 그릇 아이콘) */
-function RecipeThumb({ recipe, size }: { recipe: Pick<MapRecipe, 'recipe_id' | 'hero_image_url'>; size: number }) {
+/** 레시피 대표 사진 (없으면 그릇 아이콘). 크기는 CSS(.map-thumb)에서 */
+function RecipeThumb({ recipe }: { recipe: Pick<MapRecipe, 'recipe_id' | 'hero_image_url'> }) {
   return (
-    <span className="map-thumb" style={{ width: size, height: size, background: recipe.hero_image_url ? undefined : toneOf(recipe.recipe_id) }}>
+    <span className="map-thumb" style={recipe.hero_image_url ? undefined : { background: toneOf(recipe.recipe_id) }}>
       {recipe.hero_image_url ? <img src={recipe.hero_image_url} alt="" /> : <BowlIcon className="map-thumb-icon" />}
     </span>
   )

@@ -1,103 +1,72 @@
 @reference "../../index.css";
 
-/* [S-07] 지역의 맛 지도 — 지도 + 하단 인기 레시피 카드 + 목록 바텀 시트 */
+/* [S-07] 지역 지도 — Figma 지도 화면: 지도 전체 화면 + 뒤로가기 + 하단 메뉴 / 지역 선택 시 인기 레시피 시트 */
 @layer components {
-  .map-page { @apply relative flex h-svh flex-col overflow-hidden bg-canvas text-ink; }
-  .map-topbar { @apply grid h-[56px] shrink-0 grid-cols-[44px_1fr_44px] items-center px-2; }
-  .map-topbar h1 { @apply m-0 text-center text-[16px] font-semibold text-[#262626]; }
-  .map-back { @apply grid h-11 w-11 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[#4a4741]; }
-  .map-back svg { @apply h-6 w-6; }
+  .map-page { @apply relative h-svh overflow-hidden bg-white text-ink; }
+  .map-stage { @apply absolute inset-0; }
 
-  /* ---- 지도 영역 ---- */
-  .map-stage { @apply relative min-h-0 flex-1 overflow-hidden bg-[#e9eff1]; }
+  /* ---- 지도 ---- */
   .region-map { @apply absolute inset-0; }
   .region-map-svg { @apply block h-full w-full cursor-grab touch-none select-none; }
   .region-map-svg:active { @apply cursor-grabbing; }
   .region-shape { @apply cursor-pointer outline-none; }
-  .region-shape path { transition: fill 160ms ease; }
-  .region-shape:hover path { filter: brightness(0.96); }
-  .region-shape:focus-visible path { stroke: #43543d; stroke-width: 3; }
-  .region-map-outline { fill: none; stroke: #b94830; stroke-width: 2.4; stroke-linejoin: round; pointer-events: none; }
-  .region-map-inset { fill: #ffffff99; stroke: #b9b3a6; stroke-width: 1; stroke-dasharray: 4 4; }
-  .region-map-labels text,
-  .region-map-marker text { fill: #3d4a38; font-weight: 600; text-anchor: middle; paint-order: stroke; stroke: #ffffff; stroke-linejoin: round; pointer-events: none; }
-  .region-map-labels .region-map-dokdo { fill: #6b665d; font-weight: 500; }
-  .region-map-marker { pointer-events: none; }
-  .region-map-marker path { fill: #b94830; }
-  .region-map-marker circle { fill: #ffffff; }
-  .region-map-marker text { fill: #8f2f1c; font-weight: 700; }
+  .region-shape:hover path { filter: brightness(0.97); }
+  .region-shape:focus-visible path { stroke: #4b5348; stroke-width: 2.6; }
+  .region-map-inset { fill: #ffffff; stroke: #d9d4ca; stroke-width: 1; stroke-dasharray: 4 4; }
+  .region-map-lines,
+  .region-map-labels,
+  .region-map-pin { pointer-events: none; }
+  .region-map-labels text { font-weight: 500; letter-spacing: -0.02em; text-anchor: middle; }
+  .region-map-labels .is-province { font-weight: 800; letter-spacing: 0.14em; }
+  .region-map-labels .is-daegu { font-weight: 800; }
+  .region-map-labels .is-dokdo { fill: #6b665d; }
 
-  .region-map-zoom { @apply absolute bottom-3 right-3 flex flex-col overflow-hidden rounded-xl bg-white shadow-[0_2px_10px_#1c241526]; }
-  .region-map-zoom button { @apply grid h-10 w-10 cursor-pointer place-items-center border-0 border-b border-[#ece8e0] bg-white p-0 text-[20px] leading-none text-[#3e4a39]; }
-  .region-map-zoom button:last-child { @apply border-b-0; }
-  .region-map-zoom svg { @apply h-[18px] w-[18px]; }
-  .region-map-kakao { @apply h-full w-full; }
-  .region-map-loading { @apply absolute inset-0 m-0 grid place-items-center text-[13px] text-[#6b6b63]; }
-
-  .map-legend { @apply absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-white/90 px-2.5 py-1.5 text-[10px] text-[#5e5850] shadow-[0_1px_6px_#1c24151a]; }
-  .map-legend-title { @apply font-semibold; }
-  .map-legend-item { @apply inline-flex items-center gap-1; }
-  .map-legend-item i { @apply inline-block h-2.5 w-2.5 rounded-[3px] border border-black/10; }
-  .map-attribution { @apply pointer-events-none absolute right-2 top-2 m-0 rounded bg-white/70 px-1 text-[9px] text-[#8a857b]; }
-  .map-notice { @apply absolute left-3 right-3 top-6 m-0 rounded-lg bg-white/95 px-3 py-2 text-[11px] text-[#7a4a3c] shadow-sm; }
+  .map-back { @apply absolute left-2 z-10 grid h-11 w-11 cursor-pointer place-items-center rounded-full border-0 bg-transparent p-0 text-[#262626]; top: calc(env(safe-area-inset-top) + 6px); }
+  .map-back svg { @apply h-6 w-6; }
+  .map-attribution { @apply pointer-events-none absolute right-3 z-10 m-0 text-[9px] text-[#a19c92]; top: calc(env(safe-area-inset-top) + 20px); }
+  .map-notice { @apply absolute left-14 right-3 z-10 m-0 flex items-center justify-between gap-2 rounded-xl bg-white/95 px-3 py-2 text-[11px] text-[#7a4a3c] shadow-[0_2px_10px_#1c24151a]; top: calc(env(safe-area-inset-top) + 8px); }
+  .map-notice button { @apply shrink-0 cursor-pointer rounded-full border border-[#d9d3c7] bg-white px-2.5 py-1 text-[11px] text-[#4a4741]; }
 
   /* 카카오맵 위 이름표·마커 (카카오가 만든 DOM 안에 들어감) */
-  .kakao-region-label { @apply pointer-events-none rounded bg-white/85 px-1.5 py-0.5 text-[11px] font-semibold text-[#3d4a38]; }
-  .kakao-region-pin svg { @apply block h-9 w-7; }
-  .kakao-region-pin path { fill: #b94830; }
+  .region-map-kakao { @apply h-full w-full; }
+  .region-map-loading { @apply absolute inset-0 m-0 grid place-items-center text-[13px] text-[#6b6b63]; }
+  .kakao-region-label { @apply pointer-events-none rounded bg-white/85 px-1.5 py-0.5 text-[11px] font-medium text-[#2b2b2b]; }
+  .kakao-region-pin svg { @apply block h-8 w-6; }
+  .kakao-region-pin path { fill: #c4453b; }
   .kakao-region-pin circle { fill: #ffffff; }
 
-  /* ---- 하단 패널 ---- */
-  .map-panel { @apply min-h-[172px] shrink-0 border-t border-[#ece8e0] bg-canvas px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-4; }
-  .map-panel-intro h2 { @apply m-0 text-[16px] font-semibold text-[#262626]; }
-  .map-panel-intro p { @apply mb-0 mt-1.5 text-[12px] text-[#6b665d]; }
-  .map-chips { @apply mt-3.5 flex flex-wrap gap-2; }
-  .map-chips button { @apply cursor-pointer rounded-full border border-[#d9dfd3] bg-[#f3f6f0] px-3 py-1.5 text-[12px] text-[#3e503a]; }
-  .map-chips b { @apply ml-1 text-brand; }
-
-  .map-panel-head { @apply mb-3 flex items-center gap-1.5; }
-  .map-panel-head h2 { @apply m-0 flex-1 truncate text-[16px] font-semibold text-[#262626]; }
-  .map-panel-head > span { @apply shrink-0 text-[12px] text-[#6b665d]; }
-  .map-panel-pin { @apply h-5 w-5 shrink-0 text-terra; }
-
-  .map-top-card { @apply flex w-full cursor-pointer items-center gap-3 rounded-2xl border border-[#ece8e0] bg-white p-3 text-left shadow-[0_2px_10px_#1c24150f]; }
-  .map-top-card.is-loading { @apply cursor-default; }
-  .map-top-text { @apply flex min-w-0 flex-1 flex-col gap-[3px]; }
-  .map-top-text b { @apply truncate text-[15px] text-[#262626]; }
-  .map-top-text small { @apply truncate text-[11px] text-[#6b665d]; }
-  .map-top-text .map-top-kicker { @apply font-semibold text-terra; }
-  .map-recipe-reactions { @apply text-[#8a857b]; }
-  .map-top-more { @apply shrink-0 self-end text-[11px] text-brand; }
-  .map-panel-message { @apply flex items-center justify-between gap-3 text-[13px] text-[#6b665d]; }
-  .map-panel-message p { @apply m-0; }
-  .map-panel-message button { @apply shrink-0 cursor-pointer rounded-full border border-[#d9d3c7] bg-white px-3 py-1.5 text-[12px] text-[#4a4741]; }
-  .map-panel-empty { @apply m-0 rounded-2xl bg-[#f6f4ef] p-4 text-[13px] text-[#6b665d]; }
-
-  .map-thumb { @apply relative inline-grid shrink-0 place-items-center overflow-hidden rounded-xl; }
-  .map-thumb img { @apply h-full w-full object-cover; }
-  .map-thumb-icon { @apply h-1/2 w-1/2 text-white/85; }
-  .map-skeleton { @apply animate-pulse bg-[#ece8e0]; }
-  .map-skeleton-line { @apply block h-3 w-3/4 animate-pulse rounded bg-[#ece8e0]; }
-  .map-skeleton-line.is-short { @apply mt-2 w-1/2; }
-
-  /* ---- 인기 레시피 목록 바텀 시트 ---- */
-  .map-sheet-overlay { @apply fixed inset-0 z-40 flex items-end justify-center bg-black/35; }
-  .map-sheet { @apply flex max-h-[78svh] w-full max-w-[430px] flex-col rounded-t-[22px] bg-canvas shadow-[0_-8px_30px_#1c241526]; animation: map-sheet-up 220ms ease-out; transition: transform 180ms ease; }
+  /* ---- 인기 레시피 시트 (Figma: 흰 시트 + 손잡이 + "OO 지역의 인기 레시피" + 큰 사진 카드) ---- */
+  .map-sheet { @apply absolute inset-x-0 bottom-0 z-20 mx-auto flex max-h-[78svh] max-w-[430px] flex-col rounded-t-[28px] bg-white shadow-[0_-6px_24px_#1c24151f]; padding-bottom: calc(env(safe-area-inset-bottom) + 20px); animation: map-sheet-up 220ms ease-out; transition: transform 200ms ease; }
+  .map-sheet.is-expanded { @apply h-[72svh]; }
   .map-sheet.is-dragging { transition: none; }
-  .map-sheet-grip { @apply relative shrink-0 cursor-grab touch-none px-5 pb-3 pt-2.5; }
-  .map-sheet-handle { @apply mx-auto mb-3 block h-1 w-10 rounded-full bg-[#d8d3c8]; }
-  .map-sheet-head h2 { @apply m-0 pr-10 text-[17px] font-semibold text-[#262626]; }
-  .map-sheet-head p { @apply mb-0 mt-1 text-[12px] text-[#6b665d]; }
-  .map-sheet-close { @apply absolute right-3 top-5 grid h-9 w-9 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[#4a4741]; }
-  .map-sheet-close svg { @apply h-5 w-5; }
-  .map-sheet-list { @apply m-0 list-none overflow-y-auto overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-0; }
-  .map-recipe-row { @apply flex w-full cursor-pointer items-center gap-3 rounded-xl border-0 bg-transparent px-2 py-2.5 text-left; }
-  .map-recipe-row:hover { @apply bg-[#f6f4ef]; }
-  .map-recipe-rank { @apply w-5 shrink-0 text-center text-[13px] font-semibold text-brand; }
-  .map-recipe-text { @apply flex min-w-0 flex-1 flex-col gap-[3px]; }
-  .map-recipe-text b { @apply truncate text-[14px] text-[#262626]; }
-  .map-recipe-text small { @apply truncate text-[11px] text-[#6b665d]; }
-  .map-recipe-chevron { @apply shrink-0 text-[20px] text-[#b7b1a5]; }
+  .map-sheet-grip { @apply shrink-0 cursor-grab touch-none px-6 pb-3.5 pt-2; }
+  .map-sheet-handle { @apply mx-auto mb-2.5 block h-5 w-16 cursor-pointer border-0 bg-transparent p-0; }
+  .map-sheet-handle::before { content: ''; @apply mx-auto block h-[5px] w-[50px] rounded-full bg-[#d4d4d4]; }
+  .map-sheet-handle:disabled { @apply cursor-grab; }
+  .map-sheet-grip h2 { @apply m-0 text-[17px] font-medium text-[#262626]; }
+  .map-sheet-body { @apply min-h-0 px-3.5; }
+  .map-sheet.is-expanded .map-sheet-body { @apply flex-1 overflow-y-auto overscroll-contain; }
+
+  .map-card-list { @apply m-0 flex list-none flex-col gap-2.5 p-0; }
+  .map-card { @apply flex w-full cursor-pointer gap-4 rounded-xl border border-[#ececec] bg-white p-3 text-left; }
+  .map-card.is-loading { @apply cursor-default; }
+  .map-thumb { @apply relative grid h-[116px] w-[160px] shrink-0 place-items-center overflow-hidden rounded-md; }
+  .map-thumb img { @apply h-full w-full object-cover; }
+  .map-thumb-icon { @apply h-12 w-12 text-white/85; }
+  .map-card-text { @apply flex min-w-0 flex-1 flex-col pb-1 pt-2; }
+  .map-card-text b { @apply truncate text-[17px] font-medium text-[#262626]; }
+  .map-card-text small { @apply mt-1.5 truncate text-[13px] text-[#6b6b6b]; }
+  .map-card-reactions { @apply mt-auto flex items-center gap-3.5 text-[13px] text-[#4a4a4a]; }
+  .map-card-reactions span { @apply inline-flex items-center gap-1; }
+  .map-card-reactions svg { @apply h-4 w-4; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+
+  .map-sheet-message { @apply flex items-center justify-between gap-3 rounded-xl bg-[#f6f4ef] p-4 text-[13px] text-[#6b665d]; }
+  .map-sheet-message p { @apply m-0; }
+  .map-sheet-message button { @apply shrink-0 cursor-pointer rounded-full border border-[#d9d3c7] bg-white px-3 py-1.5 text-[12px] text-[#4a4741]; }
+  .map-sheet-empty { @apply m-0 rounded-xl bg-[#f6f4ef] p-4 text-[13px] text-[#6b665d]; }
+  .map-skeleton { @apply animate-pulse bg-[#ece8e0]; }
+  .map-skeleton-line { @apply block h-3.5 w-3/4 animate-pulse rounded bg-[#ece8e0]; }
+  .map-skeleton-line.is-short { @apply mt-2.5 w-1/2; }
 }
 
 @keyframes map-sheet-up {

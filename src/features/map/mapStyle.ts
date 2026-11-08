@@ -1,32 +1,37 @@
-// 지도 공용 값 — 색, 이름표, 경계 파일 주소 (SVG·카카오맵 둘 다 사용)
+// 지도 공용 값 — 색(Figma 지도 화면 기준), 이름표, 경계 파일 주소 (SVG·카카오맵 둘 다 사용)
 
-/** 레시피가 많은 지역일수록 진한 초록 */
-export const LEVELS = [
-  { min: 0, label: '0', fill: '#f1eee6' },
-  { min: 1, label: '1–2', fill: '#dce5d3' },
-  { min: 3, label: '3–4', fill: '#b5c6a8' },
-  { min: 5, label: '5+', fill: '#8aa07f' },
-] as const
+export const DAEGU_CODE = '27000'
 
-/** 선택한 지역은 테라코타 (명세: 마커 + 색 구분) */
-export const SELECTED_FILL = '#efc2b4'
-export const SELECTED_STROKE = '#b94830'
-export const BORDER = '#ffffff'
+/** 경상북도 시·군 — 연두 */
+export const GB_FILL = '#c4dcad'
+/** 대구광역시 — 살구 */
+export const DAEGU_FILL = '#f8c9b7'
+/** 대구·경북 바깥 테두리 — 진한 초록 */
+export const OUTLINE = '#24571d'
+/** 대구 테두리 — 갈색 */
+export const DAEGU_BORDER = '#9f6044'
+/** 시·군 사이, 대구 구·군 사이 경계선 */
+export const INNER_LINE = '#ffffff'
+/** 선택한 지역 테두리 (Figma: 진한 회색 선 + 빨간 핀) */
+export const SELECTED_STROKE = '#4b5348'
+export const PIN = '#c4453b'
+export const LABEL = '#2b2b2b'
 
-export function fillFor(count: number | undefined): string {
-  const n = count ?? 0
-  let fill: string = LEVELS[0].fill
-  for (const level of LEVELS) if (n >= level.min) fill = level.fill
-  return fill
+export const fillOf = (code: string) => (code === DAEGU_CODE ? DAEGU_FILL : GB_FILL)
+
+/** 지도 위 이름 그대로 ('대구광역시', '안동시') */
+export function mapLabel(region: { name: string }): string {
+  return region.name
 }
 
-/** 지도 위 짧은 이름 ('대구광역시' → '대구') */
-export function mapLabel(region: { name: string }): string {
-  return region.name === '대구광역시' ? '대구' : region.name
+/** 시트 제목용 짧은 이름: '안동시' → '안동', '울릉군' → '울릉', '대구광역시' → '대구' */
+export function shortName(name: string): string {
+  if (name === '대구광역시') return '대구'
+  return name.length > 2 ? name.replace(/[시군]$/, '') : name
 }
 
 /** 공공데이터(통계청 SGIS 행정동 경계)를 대구 1개 + 경북 22개 시·군으로 합친 정적 파일 */
 export const GEO_URL = '/geo/daegu-gyeongbuk.geojson'
 
-/** 지도 아래 출처 표시 (공공누리 제1유형·CC BY 4.0 출처표시 의무) */
+/** 지도 출처 표시 (공공누리 제1유형·CC BY 4.0 출처표시 의무) */
 export const GEO_ATTRIBUTION = '경계: 통계청 SGIS · admdongkor'
