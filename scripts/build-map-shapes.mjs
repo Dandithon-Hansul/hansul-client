@@ -1,4 +1,4 @@
-// public/geo/daegu-gyeongbuk.geojson → src/features/map/mapShapes.ts
+// public/geo/daegu-gyeongbuk.geojson (+ -overlay.geojson) → src/features/map/mapShapes.ts
 // 경계 파일(위도·경도)을 SVG 지도용 좌표로 미리 바꿔 둡니다. 경계 파일을 바꿨을 때만 다시 실행하세요.
 //   npm run map:shapes
 //
@@ -7,9 +7,12 @@
 //   2. 대구(sido 27)는 하나로, 경북(sido 47)은 시·군(sgg)별로 code 를 붙인 뒤 (포항 남·북구 47111·47113 → 47110)
 //   3. mapshaper -dissolve code copy-fields=name,sido -simplify 5% keep-shapes -o precision=0.0001
 //   4. 단순화하면서 사라지는 독도·죽도·관음도는 원본 조각을 다시 붙임
+//   5. 꾸밈용 overlay: 같은 단순화 결과에서 mapshaper -dissolve (바깥 테두리), -innerlines (시·군 경계선,
+//      대구 구·군 경계선) 를 뽑고 대구 구·군 9개 도형을 함께 저장 — 선과 면이 정확히 겹치도록 한 번만 단순화
 import { readFileSync, writeFileSync } from 'node:fs'
 
 const SRC = new URL('../public/geo/daegu-gyeongbuk.geojson', import.meta.url)
+const OVERLAY = new URL('../public/geo/daegu-gyeongbuk-overlay.geojson', import.meta.url)
 const OUT = new URL('../src/features/map/mapShapes.ts', import.meta.url)
 const ULLEUNG = '47940'
 const DOKDO_LON = 131.5 // 이보다 동쪽 조각 = 독도
@@ -45,7 +48,7 @@ const dokdoPts = polygonsOf(ulleung).filter(isDokdo).flatMap((p) => p[0].map(pro
 const ib = bboxOf(islandPts)
 const db = bboxOf(dokdoPts)
 const DOKDO_SCALE = 5 // 실제 크기로는 점 하나라 크게 그림
-const inset = { x: PAD, y: PAD, width: 0, height: 0 }
+const inset = { x: PAD + 40, y: PAD, width: 0, height: 0 } // 처음 화면에서 양옆을 살짝 잘라도 보이게 안쪽으로
 const islandAt = { x: inset.x + 24, y: inset.y + 20 }
 const islandShift = ([x, y]) => [x - ib.x0 + islandAt.x, y - ib.y0 + islandAt.y]
 const dokdoW = (db.x1 - db.x0) * DOKDO_SCALE
@@ -132,6 +135,41 @@ const shapes = geo.features.map((feature) => {
 
 const dokdoLabel = [round(dokdoAt.x + dokdoW / 2), round(dokdoAt.y + dokdoH + 26)]
 
+// ---- 꾸밈용 선 (Figma: 바깥 테두리 진한 초록, 시·군 사이 흰 선, 대구 안 구·군 흰 선) ----
+const overlay = JSON.parse(readFileSync(OVERLAY, 'utf8'))
+const ofKind = (kind) => overlay.features.filter((f) => f.properties.kind === kind)
+const linePath = (lines) => lines.map((line) => 'M' + line.map((p) => project(p)).map(([x, y]) => `${round(x)} ${round(y)}`).join('L')).join('')
+// 바깥 테두리: 울릉도는 상자 안에 따로 그리므로 본토만
+const outlineD = ofKind('outline')
+  .flatMap((f) => polygonsOf(f))
+  .filter((polygon) => polygon[0].every((p) => p[0] < 130.5))
+  .flatMap((polygon) => polygon.map((ring) => ringPath(ring.map(project))))
+  .join('')
+const innerD = ofKind('inner').map((f) => linePath(f.geometry.coordinates)).join('')
+const daeguInnerD = ofKind('daegu-inner').map((f) => linePath(f.geometry.coordinates)).join('')
+const daeguDistricts = ofKind('daegu-district').map((f) => {
+  const main = polygonsOf(f).map((polygon) => polygon[0].map(project)).sort((a, b) => area(b) - area(a))[0]
+  const [x, y] = labelPoint(main)
+  return { code: f.properties.code, name: f.properties.name, label: [round(x), round(y)] }
+})
+// '대구광역시' 이름표: 시내 7개 구 가운데 (달성군·군위군 제외 — 넓어서 이름표가 시내에서 멀어짐)
+const urban = daeguDistricts.filter((d) => d.code !== '27710' && d.code !== '27720')
+const daeguLabel = [round(urban.reduce((s, d) => s + d.label[0], 0) / urban.length), round(urban.reduce((s, d) => s + d.label[1], 0) / urban.length)]
+const daegu = shapes.find((shape) => shape.code === '27000')
+if (daegu) {
+  daegu.label = daeguLabel
+  const [lon, lat] = unproject(daeguLabel)
+  daegu.center = [Math.round(lat * 10000) / 10000, Math.round(lon * 10000) / 10000]
+}
+// '경상북도' 이름표: Figma 처럼 안동시와 의성군 사이
+const provinceLabel = project([128.72, 36.47]).map(round)
+// 처음 화면에 꽉 차게 보여줄 본토 범위
+const mb = bboxOf(shapes.filter((s) => s.code !== ULLEUNG).flatMap((s) => {
+  const [x, y, w, h] = s.box
+  return [[x, y], [x + w, y + h]]
+}))
+const mainlandBox = [round(mb.x0), round(mb.y0), round(mb.x1 - mb.x0), round(mb.y1 - mb.y0)]
+
 // 상자가 본토와 겹치는지 확인 (겹치면 위치 조정 필요)
 for (const s of shapes) {
   if (s.code === ULLEUNG) continue
@@ -166,6 +204,23 @@ export const MAP_SIZE = ${JSON.stringify(size)} as const
 export const ULLEUNG_INSET = ${JSON.stringify(inset)} as const
 
 export const DOKDO_LABEL = ${JSON.stringify(dokdoLabel)} as const
+
+/** 본토(울릉군 제외) 범위 [x, y, width, height] — 처음 화면 맞춤용 */
+export const MAINLAND_BOX = ${JSON.stringify(mainlandBox)} as const
+
+/** 대구·경북 바깥 테두리 (울릉도 제외) */
+export const OUTLINE_D = ${JSON.stringify(outlineD)}
+
+/** 시·군 사이 경계선 */
+export const INNER_D = ${JSON.stringify(innerD)}
+
+/** 대구 안 구·군 경계선 */
+export const DAEGU_INNER_D = ${JSON.stringify(daeguInnerD)}
+
+/** 대구 구·군 이름표 (지도에서는 대구 전체가 한 지역 — 이름표·경계선은 꾸밈용) */
+export const DAEGU_DISTRICTS: readonly { code: string; name: string; label: readonly [number, number] }[] = ${JSON.stringify(daeguDistricts)}
+
+export const PROVINCE_LABEL = ${JSON.stringify(provinceLabel)} as const
 
 export const MAP_SHAPES: readonly MapShape[] = [
 ${shapes.map((s) => '  ' + JSON.stringify(s)).join(',\n')},
