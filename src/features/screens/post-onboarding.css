@@ -9,49 +9,108 @@
   .feature-kicker { @apply mb-2.5 text-xs font-semibold tracking-[.5px] text-terra; }
   .record-view h2,.map-intro h2,.recipe-detail-content h2,.cook-page h2,.profile-summary h2 { @apply m-0 font-serif text-2xl leading-[1.5]; white-space: pre-line; }
   .feature-muted { @apply text-xs leading-[1.7] text-[#8e8a82]; }
-  .record-orb { @apply mx-auto mt-[52px] mb-[17px] grid h-[104px] w-[104px] cursor-pointer place-items-center rounded-full border-[8px] border-[#f8ece8] bg-[#b74731] text-white shadow-[0_0_0_2px_#fff,0_0_0_3px_#f1d8d0]; }
-  .record-orb svg { @apply h-[34px] w-[34px]; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .record-orb.is-recording { animation: pulse 1.2s ease-in-out infinite; }
-  .record-status { @apply min-h-[18px] text-[11px] text-[#9a938b]; }
-  .photo-upload { @apply mt-11 block w-full cursor-pointer border border-[#eae5dc] p-[14px] text-xs text-[#605c55]; }
+  .record-orb { @apply relative mx-auto mt-[52px] mb-[17px] grid h-[116px] w-[116px] cursor-pointer place-items-center rounded-full border-0 bg-[#b74731] text-white shadow-[0_0_0_2px_#fff,0_0_0_3px_#f1d8d0]; }
+  .record-orb svg { @apply h-[38px] w-[38px]; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .record-orb.is-recording { @apply bg-[#944832]; }
+  .record-orb.is-recording::before,.record-orb.is-recording::after { position: absolute; content: ''; border: 1px solid #efcfc4; border-radius: 50%; pointer-events: none; }
+  .record-orb.is-recording::before { inset: -12px; animation: record-ring-breathe 1.6s ease-in-out infinite; }
+  .record-orb.is-recording::after { inset: -24px; opacity: 0; animation: record-ring-alternate 1.6s steps(1,end) infinite; }
+  @keyframes record-ring-breathe { 0%,100% { transform: scale(.99); opacity: .75; } 50% { transform: scale(1.015); opacity: 1; } }
+  @keyframes record-ring-alternate { 0%,49% { opacity: 0; } 50%,100% { opacity: .7; } }
+  .record-status { @apply min-h-[38px] text-[12px] text-[#292824]; }
+  .record-status span { @apply mt-1 block text-[13px] text-terra; }
+  .record-guidance { @apply mt-[58px] bg-[#f0ebe2] px-4 py-4 text-center text-[#817b71]; }
+  .record-guidance small { @apply text-[11px] text-[#514e48]; }
+  .record-guidance p { @apply mb-0 mt-2 font-serif text-[13px] leading-[1.55]; }
+  .record-view .photo-upload { @apply mt-8 flex h-16 w-full cursor-pointer items-center justify-center rounded-[3px] border border-[#ded9d0] bg-white p-3 text-center text-[20px] font-normal leading-none text-[#605c55]; margin-top: 32px; }
+  .record-view .record-photo-button.is-active { border-color: #50604b; background-color: #50604b !important; color: white; }
+  .record-view .record-photo-button,.record-finish { transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }
+  .record-view .record-photo-button:hover,.record-view .record-photo-button:focus-visible,.record-finish:hover:not(:disabled),.record-finish:focus-visible { border-color: #50604b; background-color: #50604b !important; color: white; }
+  .record-transcript { @apply mt-4 block text-left text-xs text-[#605c55]; }
+  .record-transcript p { @apply mb-0 mt-2 text-sm leading-[1.6] text-[#514e48]; }
+  .record-finish { @apply mt-2 h-16 min-h-16 w-full justify-center rounded-[3px] border border-[#ded9d0] bg-white p-3 text-center text-[20px] font-normal leading-none text-[#605c55]; margin-top: 8px; }
+  .record-finish:disabled { @apply cursor-not-allowed; }
   .photo-upload input { @apply hidden; }
   .feature-primary { @apply mt-5 flex min-h-12 w-full cursor-pointer items-center justify-between rounded-[3px] border-0 bg-brand-muted px-4 text-left text-[13px] font-semibold text-white; }
+  .recipe-detail-content .feature-primary { @apply justify-center; background-color: #B9472F; }
+  .cook-controls .feature-primary { background-color: #B9472F; }
   .feature-primary span { @apply text-[19px]; }
-  .chat-page { @apply flex flex-col pb-[calc(env(safe-area-inset-bottom)+174px)]; }
-  .chat-context { @apply pt-4; }
+  .chat-page { @apply flex h-svh flex-col overflow-hidden bg-[#f5f2eb] pb-[calc(env(safe-area-inset-bottom)+174px)]; }
+  .chat-context { @apply shrink-0 pt-4; }
   .chat-context>span { @apply text-[11px] text-terra; }
   .chat-context h2 { @apply my-[7px] mb-[18px] font-serif text-xl leading-[1.4]; }
-  .chat-messages { @apply flex flex-col gap-[14px] overflow-auto; }
+  .chat-messages { @apply flex min-h-0 flex-1 flex-col gap-[14px] overflow-y-auto overscroll-contain; }
   .chat-bubble { @apply flex max-w-[90%] items-start gap-2; }
-  .chat-bubble img { @apply mt-[3px] h-[23px] w-[25px] object-contain; }
+  .chat-bubble img { @apply mt-[3px] h-9 w-9 rounded-full bg-[#50604b] p-1.5 object-contain; }
   .chat-bubble p { @apply m-0 rounded-[10px] bg-[#f3f0e8] p-3 text-xs leading-[1.6] text-[#514e48]; }
   .chat-bubble.user { @apply self-end; }
   .chat-bubble.user p { @apply bg-[#dfe5db]; }
-  .answer-options { @apply my-[14px] flex flex-wrap gap-[7px]; }
+  .answer-options { @apply my-3 flex max-h-[88px] shrink-0 flex-wrap gap-[7px] overflow-y-auto; }
+  .answer-options:empty { display: none; }
   .answer-options button { @apply cursor-pointer rounded-[18px] border border-[#e4e0d7] bg-white px-3 py-[9px] text-[11px] text-[#5b5e55]; }
-  .chat-compose { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+82px)] left-1/2 flex h-11 w-[min(calc(100%-44px),386px)] -translate-x-1/2 items-center gap-2 border border-[#e5e0d8] bg-white px-2.5; }
-  .chat-compose input { @apply min-w-0 flex-1 border-0 text-xs outline-none; }
-  .chat-compose button { @apply cursor-pointer border-0 bg-transparent text-lg text-terra; }
-  .chat-next { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+24px)] left-1/2 w-[min(calc(100%-44px),386px)] -translate-x-1/2; }
-  .recipe-page { @apply px-0 pt-[calc(env(safe-area-inset-top)+104px)]; }
-  .recipe-page .feature-header { @apply left-[22px] right-[22px]; }
-  .recipe-detail-image { @apply block h-[260px] w-full object-cover; }
-  .recipe-detail-content { @apply px-[22px] py-6; }
+  .answer-options button.is-selected { @apply border-[#50604b] bg-[#50604b] text-white; }
+  .chat-compose { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+28px)] left-1/2 flex h-[50px] w-[min(calc(100%-44px),386px)] -translate-x-1/2 items-center gap-2 border border-[#e5e0d8] bg-white px-3; }
+  .chat-compose input { @apply min-w-0 flex-1 border-0 bg-transparent text-[13px] outline-none; }
+  .chat-compose button { @apply grid h-8 w-8 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-1 text-terra; }
+  .chat-compose button svg { @apply h-5 w-5; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .chat-compose .chat-send svg { fill: currentColor; stroke: currentColor; }
+  .chat-compose .chat-mic.is-recording { @apply rounded-full bg-[#f8ece8]; animation: record-ring-breathe 1.6s ease-in-out infinite; }
+  .chat-compose button:disabled { @apply cursor-not-allowed opacity-50; }
+  .chat-image-upload { @apply cursor-pointer text-lg text-[#817b71]; }
+  .chat-next { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+78px)] left-1/2 w-auto -translate-x-1/2 justify-center border-0 bg-transparent px-2 py-1 text-[12px] font-normal text-[#aaa398] underline underline-offset-2; min-height: 30px; }
+  .chat-next span { @apply hidden; }
+  .recipe-page { @apply px-0 pt-0; }
+  .recipe-hero { @apply relative h-[342px] w-full overflow-hidden; }
+  .recipe-detail-image { @apply absolute inset-0 block h-full w-full object-cover; }
+  .recipe-hero-gradient { @apply absolute inset-0; background: linear-gradient(180deg, #17130d24 0%, transparent 38%, #17130dba 100%); }
+  .recipe-back { @apply absolute left-[22px] grid h-10 w-10 place-items-center rounded-full border-0 bg-[#3d352dba] p-2 text-white; top: calc(env(safe-area-inset-top) + 48px); }
+  .recipe-back svg { @apply h-full w-full; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .recipe-hero-actions { @apply absolute right-[22px] flex items-start gap-3; top: calc(env(safe-area-inset-top) + 48px); }
+  .recipe-hero-action { @apply flex min-w-10 flex-col items-center gap-1 text-white; }
+  .recipe-hero-action button { @apply grid h-10 w-10 place-items-center rounded-full border-0 bg-[#3d352dba] p-[9px] text-white; }
+  .recipe-hero-action svg { @apply h-full w-full; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .recipe-hero-action button[aria-pressed="true"] svg { fill: currentColor; }
+  .recipe-hero-action span { @apply text-[13px] leading-4 drop-shadow; }
+  .recipe-hero h1 { @apply absolute bottom-5 left-[22px] m-0 font-serif text-[23px] font-bold text-white; }
+  .recipe-detail-content { @apply px-[18px] py-[18px] pb-10; }
   .recipe-detail-content h2 { @apply text-[27px]; }
-  .recipe-detail-content>p:not(.feature-kicker) { @apply text-xs leading-[1.7] text-[#77736b]; }
-  .recipe-stats { @apply my-[18px] mb-[30px] flex gap-[18px] border-y border-[#eeeae4] py-[13px] text-[11px] text-[#79756d]; }
+  .recipe-author { @apply flex items-center gap-3; }
+  .recipe-author>img,.recipe-author-fallback { @apply h-10 w-10 shrink-0 rounded-full object-cover; }
+  .recipe-author-fallback { @apply grid place-items-center bg-[#d9d3c8] font-serif text-base text-[#605c55]; }
+  .recipe-author>div { @apply flex flex-col gap-1; }
+  .recipe-author strong { @apply font-serif text-[17px] font-medium text-[#34312c]; }
+  .recipe-author small { @apply text-[11px] text-[#817b71]; }
+  .recipe-quote-card { @apply mt-5 flex min-h-[74px] w-full items-center gap-3 rounded-[9px] bg-[#f2eee7] px-4 py-3; }
+  .recipe-quote-play { @apply grid h-[38px] w-[38px] shrink-0 place-items-center rounded-full border border-[#817b71] bg-transparent p-[6px] text-[#625d55]; }
+  .recipe-quote-play svg { @apply h-full w-full; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+  .recipe-quote-play:disabled { @apply opacity-80; }
+  .recipe-quote-card p { @apply m-0 font-serif text-[15px] font-medium leading-[1.5] text-[#5f5a52]; }
+  .recipe-quote-card audio { display: none; }
+  .recipe-stats { @apply my-[36px] mb-[30px] grid grid-cols-3 border-y border-[#eeeae4] py-[16px] text-center text-[14px] text-[#79756d]; }
+  .recipe-stats span small { @apply mt-1 block text-[11px] text-[#9a938b]; }
+  .recipe-detail-content ul { @apply m-0 list-none p-0; }
+  .recipe-detail-content ul li { @apply flex justify-between border-b border-[#eeeae4] px-4 py-3 text-sm text-[#6f6b64]; }
+  .recipe-detail-content ol { @apply pl-5 text-sm leading-[1.8] text-[#6f6b64]; }
   .recipe-detail-content h3 { @apply font-serif text-base; }
-  .cook-page { @apply pt-[calc(env(safe-area-inset-top)+112px)]; }
-  .cook-progress { @apply mb-[30px] h-[3px] bg-[#ede9e3]; }
-  .cook-progress span { @apply block h-full bg-[#c44b31] transition-[width] duration-200; }
-  .cook-page h2 { @apply mb-4 text-[22px]; }
-  .cook-image { @apply h-[230px] w-full rounded-lg object-cover; }
-  .cook-description { @apply my-5 text-sm leading-[1.8]; }
-  .cook-ai-tip { @apply bg-[#f2eee5] p-4 text-xs leading-[1.8] text-[#827a6d]; }
+  .cook-page { @apply relative pt-[calc(env(safe-area-inset-top)+86px)] pb-[calc(env(safe-area-inset-bottom)+98px)]; }
+  .cook-topbar { @apply absolute left-[18px] right-[18px] flex h-7 items-center gap-3; top: calc(env(safe-area-inset-top) + 45px); }
+  .cook-topbar>button { @apply grid h-7 w-5 shrink-0 place-items-center border-0 bg-transparent p-0 text-[#514e48]; }
+  .cook-topbar>button svg { @apply h-5 w-5; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .cook-segments { @apply flex flex-1 gap-1.5; }
+  .cook-segments span { @apply h-[2px] flex-1 bg-[#e5e0d8]; }
+  .cook-segments span.is-current { @apply bg-[#b9472f]; }
+  .cook-step-title { @apply mb-4 mt-0 font-serif text-[16px] font-medium text-[#272621]; }
+  .cook-image { @apply h-[186px] w-full rounded-[6px] object-cover; }
+  .cook-description { @apply mb-0 mt-5 min-h-[68px] text-[12px] leading-[1.7] text-[#5f5a52]; }
+  .cook-ai-tip { @apply mt-7 flex min-h-[50px] items-center gap-3 rounded-[5px] bg-[#f2eee5] px-4 py-3 text-[11px] leading-[1.5] text-[#827a6d]; }
   .cook-ai-tip span { @apply text-[#5e5b54]; }
-  .cook-controls { @apply mt-[22px] flex gap-[9px]; }
-  .cook-controls>button:first-child:not(.feature-primary) { @apply min-h-12 w-[34%] border border-[#ded9d0] bg-white text-[#6f6b64]; }
-  .cook-controls .feature-primary { @apply mt-0; }
+  .cook-ai-mark { @apply grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#817a70] text-[8px] font-semibold; }
+  .cook-error { @apply text-xs text-[#9a3828]; }
+  .cook-controls { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+20px)] left-1/2 z-[2] grid w-[min(calc(100%-44px),386px)] -translate-x-1/2 grid-cols-2 gap-2; }
+  .cook-controls.is-first .feature-primary { grid-column: 2; }
+  .cook-controls .cook-prev { @apply min-h-12 rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
+  .cook-controls .feature-primary { @apply m-0 min-h-12 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
+  .cook-evaluation { @apply mt-8; }
   .food-list { @apply flex flex-col gap-[13px] pt-[30px]; }
   .food-list-card { @apply grid w-full grid-cols-[88px_1fr_20px] items-center gap-3 rounded-lg border border-[#f0ede7] bg-white p-2 text-left; }
   .food-list-card img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }

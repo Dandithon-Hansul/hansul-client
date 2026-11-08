@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
 import './App.css'
-import { isFeaturePage, pathOf, type Destination } from './app/paths'
+import { isFeaturePage, pathOf, recipePath, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
 import { DEFAULT_ROLE, setupProfile } from './lib/api/profile'
@@ -95,7 +95,7 @@ function App({ splashMs }: { splashMs?: number }) {
           />
           {/* 온보딩을 끝내서 서버에 프로필이 있어야 들어갈 수 있는 화면 */}
           <Route element={<RequireProfile />}>
-            <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
+            <Route path="/" element={<HomeScreen name={name} onNavigate={go} onRecipeSelect={(recipeId) => navigate(recipePath(recipeId))} />} />
             {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/edit" element={<ProfileEditPage />} />
