@@ -16,6 +16,8 @@ export type RecipeDetail = {
   title: string;
   hero_image_url: string | null;
   transmitter_name: string;
+  transmitter_avatar_url?: string | null;
+  transmitter_region?: string | null;
   transmitter_quote: string;
   context_summary: string;
   voice_message_url: string | null;

@@ -1,8 +1,8 @@
 @reference "../../index.css";
 
 @layer components {
-  .home-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+116px)] text-ink; padding-top: calc(env(safe-area-inset-top) + 139px); }
-  .home-header { @apply absolute left-[22px] right-[22px] flex h-[42px] items-center justify-between; top: calc(env(safe-area-inset-top) + 74px); }
+  .home-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+116px)] text-ink; padding-top: calc(env(safe-area-inset-top) + 103px); }
+  .home-header { @apply absolute left-[22px] right-[22px] flex h-[42px] items-center justify-between; top: calc(env(safe-area-inset-top) + 38px); }
   .home-brand { @apply inline-flex items-center gap-[5px] font-serif text-[15px] text-brand-muted no-underline; }
   .home-brand img { @apply h-[27px] w-[29px] object-contain; }
   .profile-shortcut { @apply h-[34px] w-[34px] cursor-pointer border-0 bg-transparent p-px text-[#585149]; }
@@ -57,3 +57,4 @@
   .home-header { left: calc(50% - 193px); right: calc(50% - 193px); }
   .home-bottom-nav { bottom: 24px; }
 }
+

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { analyzeRecipe, attachStepPhoto, createRecipe, evaluateRecipe, generateStepImages, getRecipe, getRecipes, regenerateStepImage, sendRecipeChat, toggleRecipe, transcribe, uploadRecipeVoice, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
+import { analyzeRecipe, attachStepPhoto, createRecipe, evaluateRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
 import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
@@ -35,10 +35,13 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [busy, setBusy] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [evaluationText, setEvaluationText] = useState('')
+  const [quotePlaying, setQuotePlaying] = useState(false)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const mediaStream = useRef<MediaStream | null>(null)
   const chatMediaRecorder = useRef<MediaRecorder | null>(null)
   const chatMediaStream = useRef<MediaStream | null>(null)
+  const quoteAudio = useRef<HTMLAudioElement | null>(null)
+  const imageGenerationRequested = useRef(new Set<string>())
   const recipeId = searchParams.get('id') || draftId || 'r-daegu-yukgaejang'
   useEffect(() => {
     if (page === 'recipe' || page === 'cook') {
@@ -53,6 +56,22 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }
     return undefined
   }, [page, recipeId])
+
+  useEffect(() => {
+    if (page !== 'cook' || !recipe || recipe.recipe_id !== recipeId) return
+    const hasMissingStepImage = recipe.steps.slice(0, -1).some((step) => !step.image_url)
+    if (!hasMissingStepImage || imageGenerationRequested.current.has(recipe.recipe_id)) return
+    imageGenerationRequested.current.add(recipe.recipe_id)
+    void generateStepImages(recipe.recipe_id).then((result) => {
+      setRecipe((current) => current && current.recipe_id === recipe.recipe_id ? {
+        ...current,
+        steps: current.steps.map((step) => {
+          const generated = result.generated.find((image) => image.order === step.order)
+          return generated ? { ...step, image_url: generated.image_url } : step
+        }),
+      } : current)
+    }).catch(() => setScreenError('단계 이미지를 불러오지 못했어요.'))
+  }, [page, recipe, recipeId])
 
   useEffect(() => () => mediaStream.current?.getTracks().forEach((track) => track.stop()), [])
   useEffect(() => () => chatMediaStream.current?.getTracks().forEach((track) => track.stop()), [])
@@ -190,6 +209,18 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     } catch { setScreenError('마이크를 사용할 수 없어요. 브라우저 권한을 확인해 주세요.') }
   }
 
+  async function toggleQuoteAudio() {
+    const audio = quoteAudio.current
+    if (!audio) return
+    if (audio.paused) {
+      try { await audio.play(); setQuotePlaying(true) }
+      catch { setScreenError('전승자의 음성을 재생하지 못했어요.') }
+    } else {
+      audio.pause()
+      setQuotePlaying(false)
+    }
+  }
+
   async function analyzeAndPublish() {
     setBusy(true); setScreenError('')
     try {
@@ -250,10 +281,43 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   if (page === 'recipe') return (
     <main className="feature-page recipe-page">
-      <PageHeader title="레시피 상세" onBack={() => onNavigate('home')} />
       {screenError && <p role="alert">{screenError}</p>}
-      {recipe && <><img className="recipe-detail-image" src={recipe.hero_image_url ?? ''} alt={recipe.title} />
-      <div className="recipe-detail-content"><p className="feature-kicker">{recipe.transmitter_name} 전승 레시피</p><h2>{recipe.title}</h2><p className="feature-muted">{recipe.context_summary}</p><div className="recipe-stats"><button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'like').then((value) => setRecipe({ ...recipe, is_liked: value.liked, like_count: value.like_count }))}>{recipe.is_liked ? '♥' : '♡'} {recipe.like_count}</button><button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'save').then((value) => setRecipe({ ...recipe, is_saved: value.saved, save_count: value.save_count }))}>{recipe.is_saved ? '저장됨' : '저장'} · {recipe.save_count}</button><span>조리 시간 {recipe.cooking_time}분</span></div><label className="photo-upload">전승자 한 마디 음성 추가<input type="file" accept="audio/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void uploadSignedFile(file, 'card_voice', recipe.recipe_id).then((signed) => uploadRecipeVoice(recipe.recipe_id, signed.path)).catch(() => setScreenError('음성을 업로드하지 못했어요.')) }} /></label><h3>재료</h3><ul>{recipe.ingredients.map((item) => <li key={item.name}>{item.name} {item.amount ?? ''}{item.unit ?? ''}</li>)}</ul><h3>조리 순서</h3><ol>{recipe.steps.map((step) => <li key={step.order}>{step.title}: {step.description}</li>)}</ol><button className="feature-primary" type="button" onClick={() => { setCookStep(0); onNavigate('cook') }}>단계별로 따라 만들기 <span>→</span></button></div></>}
+      {recipe && <>
+        <section className="recipe-hero">
+          <img className="recipe-detail-image" src={recipe.hero_image_url ?? '/images/andong-jjimdak.png'} alt={recipe.title} />
+          <span className="recipe-hero-gradient" />
+          <button className="recipe-back" type="button" onClick={() => onNavigate('home')} aria-label="뒤로가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
+          <div className="recipe-hero-actions">
+            <div className="recipe-hero-action">
+              <button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'like').then((value) => setRecipe({ ...recipe, is_liked: value.liked, like_count: value.like_count }))} aria-label={recipe.is_liked ? '좋아요 취소' : '좋아요'} aria-pressed={recipe.is_liked}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 4.1-8.8 10-8.8 10S3.2 12.8 3.2 8.7a4.5 4.5 0 0 1 8.8-1.3 4.5 4.5 0 0 1 8.8 1.3Z" /></svg>
+              </button><span>{recipe.like_count}</span>
+            </div>
+            <div className="recipe-hero-action">
+              <button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'save').then((value) => setRecipe({ ...recipe, is_saved: value.saved, save_count: value.save_count }))} aria-label={recipe.is_saved ? '스크랩 취소' : '스크랩'} aria-pressed={recipe.is_saved}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4-6 4z" /></svg>
+              </button><span>{recipe.save_count}</span>
+            </div>
+          </div>
+          <h1>{recipe.title}</h1>
+        </section>
+        <div className="recipe-detail-content">
+          <div className="recipe-author">
+            {recipe.transmitter_avatar_url ? <img src={recipe.transmitter_avatar_url} alt="" /> : <span className="recipe-author-fallback" aria-hidden="true">{recipe.transmitter_name.slice(0, 1)}</span>}
+            <div><strong>{recipe.transmitter_name} 전승자</strong>{recipe.transmitter_region && <small>{recipe.transmitter_region}</small>}</div>
+          </div>
+          <div className="recipe-quote-card">
+            <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} disabled={!recipe.voice_message_url} aria-label={quotePlaying ? '한마디 음성 일시정지' : '한마디 음성 재생'}>
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>
+            </button>
+            <p>“{recipe.transmitter_quote}”</p>
+            {recipe.voice_message_url && <audio ref={quoteAudio} src={recipe.voice_message_url} onEnded={() => setQuotePlaying(false)} />}
+          </div>
+          <div className="recipe-stats"><span>{recipe.cooking_time}분 <small>조리시간</small></span><span>{recipe.difficulty} <small>난이도</small></span><span>{recipe.servings}인분 <small>인분</small></span></div>
+          <h3>재료</h3><ul>{recipe.ingredients.map((item) => <li key={item.name}>{item.name} <span>{item.amount ?? ''}{item.unit ?? ''}</span></li>)}</ul>
+          <button className="feature-primary" type="button" onClick={() => { setCookStep(0); onNavigate('cook') }}>단계별로 따라 만들기</button>
+        </div>
+      </>}
     </main>
   )
 
@@ -261,7 +325,26 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     const steps = recipe?.steps ?? []
     const step = steps[cookStep]
     if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => onNavigate('recipe')} /><p>{screenError || '조리 단계를 불러오는 중…'}</p></main>
-    return <main className="feature-page cook-page"><PageHeader title={`${recipe?.title ?? '레시피'} · ${cookStep + 1}단계`} onBack={() => onNavigate('recipe')} /><div className="cook-progress"><span style={{ width: `${((cookStep + 1) / steps.length) * 100}%` }} /></div><p className="feature-kicker">{cookStep + 1} / {steps.length} 단계</p><h2>{step.title}</h2>{step.image_url && <img className="cook-image" src={step.image_url} alt="조리 단계" />}<p className="cook-description">{step.description}</p>{step.tip && <div className="cook-ai-tip">✦ 한술의 팁<br /><span>{step.tip}</span></div>}<div className="cook-controls">{cookStep > 0 && <button type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}<button type="button" disabled={busy} onClick={() => { setBusy(true); void generateStepImages(recipe!.recipe_id).then((result) => setRecipe({ ...recipe!, steps: recipe!.steps.map((item) => { const image = result.generated.find((generated) => generated.order === item.order); return image ? { ...item, image_url: image.image_url } : item }) })).catch(() => setScreenError('단계 이미지를 만들지 못했어요.')).finally(() => setBusy(false)) }}>단계 이미지 만들기</button>{step.order < steps.length - 1 && <button type="button" disabled={busy} onClick={() => { setBusy(true); void regenerateStepImage(recipe!.recipe_id, step.order).then((image) => setRecipe({ ...recipe!, steps: recipe!.steps.map((item) => item.order === step.order ? { ...item, image_url: image.image_url } : item) })).catch(() => setScreenError('이미지를 다시 만들지 못했어요.')).finally(() => setBusy(false)) }}>이 단계 이미지 재생성</button>}<button className="feature-primary" type="button" onClick={() => cookStep === steps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === steps.length - 1 ? '요리 끝내기' : '다음 단계'} <span>→</span></button></div>{cookStep === steps.length - 1 && <div><label className="photo-upload">완성 사진 추가<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void uploadSignedFile(file, 'step_photo', recipe!.recipe_id).then((signed) => attachStepPhoto(recipe!.recipe_id, step.order, signed.path)).then((result) => setRecipe({ ...recipe!, steps: recipe!.steps.map((item) => item.order === step.order ? { ...item, image_url: result.image_url } : item) })).catch(() => setScreenError('완성 사진을 업로드하지 못했어요.')) }} /></label><p>요리는 어떠셨나요?</p><select aria-label="전체 만족도"><option value="3">만족</option><option value="2">보통</option><option value="1">아쉬움</option></select><button type="button" disabled={busy} onClick={() => { setBusy(true); setEvaluationText(''); void evaluateRecipe({ recipe_id: recipe!.recipe_id, evaluation: { salt: 0, consistency: 0, doneness: 0, overall: 3, rule_followed: true } }, (event) => { if (typeof event.data.text === 'string') setEvaluationText((value) => value + event.data.text) }).catch(() => setEvaluationText('평가를 저장하지 못했어요.')).finally(() => setBusy(false)) }}>맛 평가 받기</button>{evaluationText && <p>{evaluationText}</p>}</div>}</main>
+    return (
+      <main className="feature-page cook-page">
+        <header className="cook-topbar">
+          <button type="button" onClick={() => onNavigate('recipe')} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
+          <div className="cook-segments" aria-label={`${cookStep + 1} / ${steps.length} 단계`}>
+            {steps.map((item, index) => <span key={item.order} className={index === cookStep ? 'is-current' : ''} />)}
+          </div>
+        </header>
+        {screenError && <p className="cook-error" role="alert">{screenError}</p>}
+        <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
+        <img className="cook-image" src={step.image_url ?? recipe?.hero_image_url ?? '/images/andong-jjimdak.png'} alt={step.title} />
+        <p className="cook-description">{step.description}</p>
+        {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
+        {cookStep === steps.length - 1 && <section className="cook-evaluation"><label className="photo-upload">완성 사진 추가<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void uploadSignedFile(file, 'step_photo', recipe!.recipe_id).then((signed) => attachStepPhoto(recipe!.recipe_id, step.order, signed.path)).then((result) => setRecipe((current) => current ? { ...current, steps: current.steps.map((item) => item.order === step.order ? { ...item, image_url: result.image_url } : item) } : current)).catch(() => setScreenError('완성 사진을 업로드하지 못했어요.')) }} /></label><p>요리는 어떠셨나요?</p><select aria-label="전체 만족도"><option value="3">만족</option><option value="2">보통</option><option value="1">아쉬움</option></select><button type="button" disabled={busy} onClick={() => { setBusy(true); setEvaluationText(''); void evaluateRecipe({ recipe_id: recipe!.recipe_id, evaluation: { salt: 0, consistency: 0, doneness: 0, overall: 3, rule_followed: true } }, (event) => { if (typeof event.data.text === 'string') setEvaluationText((value) => value + event.data.text) }).catch(() => setEvaluationText('평가를 저장하지 못했어요.')).finally(() => setBusy(false)) }}>맛 평가 받기</button>{evaluationText && <p>{evaluationText}</p>}</section>}
+        <nav className={`cook-controls ${cookStep === 0 ? 'is-first' : ''}`}>
+          {cookStep > 0 && <button className="cook-prev" type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}
+          <button className="feature-primary" type="button" onClick={() => cookStep === steps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === steps.length - 1 ? '요리 끝내기' : '다음 단계'}</button>
+        </nav>
+      </main>
+    )
   }
 
   if (page === 'monthly') return (
