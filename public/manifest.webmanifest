@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "한술",
+  "short_name": "한술",
+  "description": "우리 식탁의 이야기를 기록하는 곳",
+  "lang": "ko-KR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fffefd",
+  "theme_color": "#43543d",
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
