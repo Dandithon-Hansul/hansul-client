@@ -63,7 +63,8 @@ describe('온보딩 (Figma 최종 디자인)', () => {
     // 서버(mock)에 프로필이 저장됨 — 지역은 건너뛰어서 null
     expect(await screen.findByText(/오늘은 어떤 맛의 기억을/)).toBeInTheDocument()
     const saved = readMockDb().profiles['mock-user-newcook']
-    expect(saved).toMatchObject({ display_name: '새요리사', region: null, food_preferences: ['찜·조림'], role: 'transmitter' })
+    expect(saved).toMatchObject({ display_name: '새요리사', region: null, food_preferences: ['찜·조림'] })
+    expect(saved).not.toHaveProperty('role') // 명세서: 역할 선택 없음
 
     // 홈 → 프로필: 온보딩이 아니라 마이페이지가 나와야 함
     await user.click(screen.getByRole('button', { name: '프로필' }))

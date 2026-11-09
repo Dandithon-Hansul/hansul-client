@@ -1,15 +1,19 @@
-import { authService } from './auth/authService'
+import { apiFetch } from './api/client'
 import { IS_MOCK } from './env'
 import { blobToDataUrl, resizeImage } from './image'
 import { getSupabase } from './supabase'
 
-export const AVATAR_BUCKET = 'avatars'
+/** POST /api/uploads/sign 응답 — 비공개 버킷에 한 번 올릴 수 있는 토큰 */
+type SignedUpload = { bucket: string; path: string; token: string }
 
 /**
- * 프로필 사진 업로드 → 사진 주소(URL) 반환
- * PATCH /api/profiles/me 는 avatar_url(문자열)만 받기 때문에,
- * 파일은 프론트가 Supabase Storage 에 직접 올리고 받은 주소를 PATCH 로 보냄.
- * 경로: avatars/{user_id}/{시간}.jpg  ⚠️ 백엔드에 avatars 버킷·정책 생성 요청 필요
+ * 프로필 사진 업로드 → PATCH /api/profiles/me 의 avatar_url 로 보낼 값 반환
+ * 백엔드 방식 (API 명세서 0-3 · BE 업데이트):
+ *   1. POST /api/uploads/sign { purpose: "avatar", content_type, size_bytes } → { bucket, path, token }
+ *   2. Supabase uploadToSignedUrl(path, token, file) 로 직접 업로드
+ *   3. PATCH /api/profiles/me { avatar_url: path } — 이 함수는 path 를 돌려줌
+ *   4. GET /api/profiles/me 의 avatar_url 은 서버가 서명 URL 로 바꿔서 줌
+ * 사진은 512px JPEG 로 줄여서 올림 (avatar 제한: 5MB, jpeg/png/webp)
  */
 export async function uploadAvatar(file: File): Promise<string> {
   const image = await resizeImage(file)
@@ -17,12 +21,12 @@ export async function uploadAvatar(file: File): Promise<string> {
   // mock: 서버 대신 브라우저 저장소에 data URL 로 보관 (512px 로 줄였으니 수십 KB)
   if (IS_MOCK) return blobToDataUrl(image)
 
-  const session = await authService.getSession()
-  if (!session) throw new Error('로그인이 필요해요.')
-
-  const path = `${session.userId}/${Date.now()}.jpg`
-  const storage = getSupabase().storage.from(AVATAR_BUCKET)
-  const { error } = await storage.upload(path, image, { contentType: 'image/jpeg', cacheControl: '3600', upsert: false })
+  const contentType = image.type || 'image/jpeg'
+  const signed = await apiFetch<SignedUpload>('/api/uploads/sign', {
+    method: 'POST',
+    json: { purpose: 'avatar', content_type: contentType, size_bytes: image.size },
+  })
+  const { error } = await getSupabase().storage.from(signed.bucket).uploadToSignedUrl(signed.path, signed.token, image, { contentType })
   if (error) throw new Error('사진을 올리지 못했어요. 다시 시도해주세요.')
-  return storage.getPublicUrl(path).data.publicUrl
+  return signed.path
 }

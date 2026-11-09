@@ -4,7 +4,7 @@ import { readMockDb, writeMockDb } from '../mock/mockDb'
 import { DEMO_MY_RECIPES, DEMO_SAVED, MOCK_PUBLIC_PROFILES } from '../mock/mockRecipes'
 import { findRegionByCode, findRegionByText } from '../regions'
 import { ApiError, apiFetch } from './client'
-import type { CursorPage, MyProfile, MyRecipeItem, ProfileSetupBody, ProfileSetupResponse, ProfileUpdateBody, PublicProfile, RecipeThumb, Region, Role, SavedRecipeItem } from './types'
+import type { CursorPage, MyProfile, MyRecipeItem, ProfileSetupBody, ProfileSetupResponse, ProfileUpdateBody, PublicProfile, RawPublicProfile, Region, SavedRecipeItem } from './types'
 
 export const PAGE_SIZE = 18 // 3열 × 6줄
 
@@ -73,9 +73,6 @@ export async function getMyProfile(): Promise<MyProfile> {
   }
 }
 
-/** 역할은 나누지 않기로 해서(팀 결정) setup 에 항상 이 값을 보냄 — 백엔드와 확정되면 여기만 수정 */
-export const DEFAULT_ROLE: Role = 'transmitter'
-
 /**
  * POST /api/profiles/setup — 온보딩 결과를 서버에 저장 (이게 있어야 GET /api/profiles/me 가 404 가 아님)
  * 응답의 start_route 는 쓰지 않고 화면에서 홈으로 보냄 (기능 명세서·Figma 기준)
@@ -91,7 +88,6 @@ export async function setupProfile(body: ProfileSetupBody): Promise<ProfileSetup
   const previous = db.profiles[userId]
   db.profiles[userId] = {
     id: userId,
-    role: body.role,
     display_name: body.display_name,
     avatar_url: previous?.avatar_url ?? null,
     region: region ? { ...region, dong: null } : null,
@@ -99,7 +95,7 @@ export async function setupProfile(body: ProfileSetupBody): Promise<ProfileSetup
     stats: previous?.stats ?? { transmitted_recipes: 0, saved_recipes: 0, likes_received: 0 },
   }
   writeMockDb(db)
-  return { profile_id: userId, role: body.role, start_route: '/' }
+  return { profile_id: userId, start_route: '/' }
 }
 
 /** PATCH /api/profiles/me — 프로필 편집 */
@@ -137,31 +133,36 @@ export async function getMySaved(cursor: string | null): Promise<CursorPage<Save
   return paginate(isDemo(mockUserId()) ? DEMO_SAVED : [], cursor)
 }
 
-// ───────────── 다른 사용자 (⚠️ 명세서에 없는 API — 백엔드 추가 요청 필요) ─────────────
+// ───────────── 다른 사용자 (전승자) ─────────────
 
-/** GET /api/profiles/:id */
+/** 화면에 바로 쓸 수 있는 이미지 주소만 통과 (백엔드가 저장 경로를 그대로 주면 기본 사진으로) */
+export function displayableImage(url: string | null | undefined): string | null {
+  if (!url) return null
+  return /^(https?:|data:|blob:|\/)/.test(url) ? url : null
+}
+
+/**
+ * GET /api/profiles/:id — 프로필·숫자·전승한 레시피를 한 번에 받음 (백엔드 develop 기준, 명세서 목록엔 아직 없음)
+ * 저장한 레시피 수·목록은 내 프로필에서만 제공 (명세서: 저장 목록은 본인만)
+ */
 export async function getUserProfile(id: string): Promise<PublicProfile> {
-  let raw: PublicProfile
+  let raw: RawPublicProfile
   if (IS_MOCK) {
     await wait(MOCK_DELAY_MS)
     const hit = MOCK_PUBLIC_PROFILES[id]
-    if (!hit) throw new ApiError(404, 'PROFILE_NOT_FOUND', '프로필을 찾을 수 없어요.')
-    raw = hit.profile
+    if (!hit) throw new ApiError(404, 'PROFILE_NOT_FOUND', '전승자를 찾을 수 없습니다.')
+    raw = hit
   } else {
-    raw = await apiFetch<PublicProfile>(`/api/profiles/${encodeURIComponent(id)}`)
+    raw = await apiFetch<RawPublicProfile>(`/api/profiles/${encodeURIComponent(id)}`)
   }
   return {
-    ...raw,
-    avatar_url: raw.avatar_url ?? null,
-    bio: raw.bio ?? null,
+    id: raw.profile_id ?? id,
+    display_name: raw.display_name,
+    avatar_url: displayableImage(raw.avatar_url),
     region: normalizeRegion(raw.region),
-    stats: { transmitted_recipes: raw.stats?.transmitted_recipes ?? 0, likes_received: raw.stats?.likes_received ?? 0 },
+    region_text: raw.region ?? null,
+    bio: raw.bio ?? null,
+    stats: { transmitted_recipes: raw.recipe_count ?? 0, likes_received: raw.received_like_count ?? 0 },
+    recipes: raw.recipes ?? [],
   }
-}
-
-/** GET /api/profiles/:id/recipes */
-export async function getUserRecipes(id: string, cursor: string | null): Promise<CursorPage<RecipeThumb>> {
-  if (!IS_MOCK) return toPage(await apiFetch<RawPage<RecipeThumb>>(`/api/profiles/${encodeURIComponent(id)}/recipes${pageQuery(cursor)}`))
-  await wait(MOCK_DELAY_MS)
-  return paginate(MOCK_PUBLIC_PROFILES[id]?.recipes ?? [], cursor)
 }

@@ -121,8 +121,10 @@ npm run dev -- --host 0.0.0.0
 
 ### 백엔드에 요청할 것 (프로필)
 
-- `GET /api/profiles/:id`, `GET /api/profiles/:id/recipes` — 다른 사용자 프로필 (명세서에 없음), 소개글 `bio` 컬럼
-- 프로필 사진: Supabase Storage `avatars` 공개 버킷 + 본인 폴더(`{user_id}/`)만 업로드 허용 정책. 프론트가 직접 올리고 주소를 `PATCH /api/profiles/me` 의 `avatar_url` 로 보냄
+- `GET /api/profiles/:id` — 다른 사용자 프로필. 백엔드 코드에는 있고(프로필·숫자·레시피를 한 번에) 명세서 목록엔 아직 없음. 프론트는 이 형식에 맞춤. 응답의 `avatar_url` 도 서명 URL 로 바꿔 달라고 요청 (지금은 저장 경로라 기본 사진으로 보임)
+- 프로필 사진: 반영 완료 — `POST /api/uploads/sign`(purpose `avatar`) → `uploadToSignedUrl` → `PATCH /api/profiles/me` 에 경로 전달 (`src/lib/storage.ts`)
+- ⚠️ 대구는 Figma대로 `27000` 하나로 보내는데 백엔드는 구·군 코드만 받아서 온보딩 저장·프로필 편집이 422 — `27000`(대구 전체) 허용 요청 중
+- ⚠️ 온보딩 '건너뛰기'(지역 없음)도 백엔드는 지역 필수라 실패 — 선택 허용 여부 확인 중
 - 거주지역은 `region_code`(행정코드 5자리, 예: 안동시 `47170`)로 보냄 — 목록은 `src/lib/regions.ts`
 
 ### 지역 지도 (`/map`)

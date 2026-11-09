@@ -1,7 +1,5 @@
 // API 명세서 v0.1 기준 타입 (필요한 것부터 추가)
 
-export type Role = 'transmitter' | 'learner'
-
 export type Region = {
   code: string
   sido: string
@@ -12,7 +10,6 @@ export type Region = {
 /** GET /api/profiles/me */
 export type MyProfile = {
   id: string
-  role: Role
   display_name: string
   avatar_url: string | null
   region: Region | null
@@ -65,36 +62,46 @@ export type CursorPage<T> = {
   nextCursor: string | null
 }
 
-/**
- * 다른 사용자(전승자) 프로필
- * ⚠️ API 명세서에 아직 없음 — GET /api/profiles/:id 로 가정. bio(소개글)도 DB 컬럼 추가 필요
- */
+/** GET /api/profiles/:id 응답 그대로 (백엔드 hansul-server develop 기준 — 명세서 목록엔 아직 없음) */
+export type RawPublicProfile = {
+  profile_id: string
+  display_name: string
+  avatar_url: string | null
+  /** 지역 이름 글자 ("안동시") */
+  region: string | null
+  bio: string | null
+  recipe_count: number
+  received_like_count: number
+  recipes: RecipeThumb[]
+}
+
+/** 다른 사용자(전승자) 프로필 — 화면에서 쓰기 좋게 정리한 형태 */
 export type PublicProfile = {
   id: string
   display_name: string
   avatar_url: string | null
   region: Region | null
+  /** 지역 코드로 못 찾았을 때 그대로 보여줄 글자 */
+  region_text: string | null
   bio: string | null
   stats: {
     transmitted_recipes: number
     likes_received: number
   }
+  recipes: RecipeThumb[]
 }
 
 /**
- * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기"
- * region_code: 지역을 건너뛰면 null (⚠️ 백엔드에서 null 허용 필요)
- * role: 팀 결정으로 역할을 나누지 않아 기본값을 보냄
+ * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기" (명세서: 역할 선택 없음)
+ * region_code: 지역을 건너뛰면 null (⚠️ 백엔드는 아직 필수 — 허용 여부 확인 중)
  */
 export type ProfileSetupBody = {
   display_name: string
   region_code: string | null
   food_preferences: string[]
-  role: Role
 }
 
 export type ProfileSetupResponse = {
   profile_id: string
-  role: Role
   start_route: string
 }
