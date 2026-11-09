@@ -117,7 +117,7 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
     <div className="home-page">
       <header className="home-header">
         <a className="home-brand" href="/" onClick={(event) => { event.preventDefault(); onNavigate('home') }} aria-label="한술 홈">
-          <img src="/logo.svg" alt="" />
+          <img src="/images/hansul-logo-mark.png" alt="" />
           <span>한술</span>
         </a>
         <button className="profile-shortcut" type="button" aria-label="프로필" onClick={() => onNavigate('profile')}>

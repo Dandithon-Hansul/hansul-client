@@ -73,7 +73,7 @@ describe('이달의 TOP 6 전체 목록', () => {
     const user = renderApp('/monthly')
     await user.click(await screen.findByRole('button', { name: /01 한마디 있는 음식/ }))
     expect(await screen.findByRole('button', { name: '한마디 기기 음성으로 읽기' })).toBeInTheDocument()
-    expect(screen.getByText('전승자 음성 파일이 없어 기기 음성으로 읽어드려요.')).toBeInTheDocument()
+    expect(screen.queryByText('전승자 음성 파일이 없어 기기 음성으로 읽어드려요.')).not.toBeInTheDocument()
   })
 
 })

@@ -545,6 +545,16 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     <main className="feature-page recipe-page">
       {screenError && <p role="alert">{screenError}</p>}
       {!recipeId && <p role="alert">레시피를 찾을 수 없어요.</p>}
+      {!recipe && recipeId && !screenError && <div className="recipe-loading" role="status" aria-label="레시피를 불러오는 중">
+        <div className="recipe-loading-cover cook-skeleton" aria-hidden="true" />
+        <div className="recipe-loading-details">
+          <div className="cook-skeleton recipe-loading-title" aria-hidden="true" />
+          <div className="cook-skeleton recipe-loading-author" aria-hidden="true" />
+          <div className="cook-skeleton recipe-loading-quote" aria-hidden="true" />
+          <div className="cook-skeleton recipe-loading-lines" aria-hidden="true" />
+        </div>
+        <span className="visually-hidden">레시피를 불러오는 중이에요.</span>
+      </div>}
       {recipe && <>
         <section className="recipe-hero">
           <RecipePhoto className="recipe-detail-image" src={recipe.hero_image_url} title={recipe.title} />
@@ -573,9 +583,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             {(recipe.voice_message_url || recipe.transmitter_quote) && <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} aria-label={quotePlaying ? '한마디 음성 일시정지' : recipe.voice_message_url ? '한마디 음성 재생' : '한마디 기기 음성으로 읽기'}>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>
             </button>}
-            <div>{recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}
-              {!recipe.voice_message_url && recipe.transmitter_quote && <small>전승자 음성 파일이 없어 기기 음성으로 읽어드려요.</small>}
-            </div>
+            <div>{recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}</div>
             {recipe.voice_message_url && <audio ref={quoteAudio} src={recipe.voice_message_url} onPause={() => setQuotePlaying(false)} onEnded={() => setQuotePlaying(false)} onError={() => setScreenError('전승자의 음성을 재생하지 못했어요.')} />}
           </div>}
           <div className="recipe-stats"><span>{recipe.cooking_time}분 <small>조리시간</small></span><span>{recipe.difficulty} <small>난이도</small></span><span>{recipe.servings}인분 <small>인분</small></span></div>
@@ -590,17 +598,38 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     const steps = recipe?.steps ?? []
     const step = steps[cookStep]
     const currentImageStatus = stepImageStatus?.recipeId === recipe?.recipe_id ? stepImageStatus : null
-    if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => navigate(recipePath(recipeId))} /><p>{screenError || (recipeId ? '조리 단계를 불러오는 중…' : '레시피를 찾을 수 없어요.')}</p></main>
+    if (!step) return (
+      <main className="feature-page cook-page">
+        <header className="cook-topbar">
+          <div className="cook-segments" aria-label="조리 단계 불러오는 중"><span className="is-current" /><span /><span /></div>
+          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+        </header>
+        {screenError || !recipeId
+          ? <p className="cook-error" role="alert">{screenError || '레시피를 찾을 수 없어요.'}</p>
+          : <div className="cook-loading" role="status" aria-label="조리 단계를 불러오는 중">
+            <span className="cook-skeleton cook-skeleton-heading" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-photo" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-line" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-line is-short" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-tip" aria-hidden="true" />
+            <span className="visually-hidden">조리 단계를 불러오는 중이에요.</span>
+          </div>}
+        <nav className="cook-controls is-first" aria-label="조리 단계 이동">
+          <button className="feature-primary" type="button" disabled>다음 단계</button>
+        </nav>
+      </main>
+    )
     return (
       <main className="feature-page cook-page">
         <header className="cook-topbar">
-          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
           <div className="cook-segments" aria-label={`${cookStep + 1} / ${steps.length} 단계`}>
             {steps.map((item, index) => <span key={item.order} className={index === cookStep ? 'is-current' : ''} />)}
           </div>
+          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
         </header>
         {screenError && <p className="cook-error" role="alert">{screenError}</p>}
-        {currentImageStatus?.generating && <p className="cook-image-progress" role="status">단계 이미지를 생성하고 있어요. 조리는 계속할 수 있어요.</p>}
         {currentImageStatus && currentImageStatus.failedOrders.length > 0 && <div className="cook-image-failure" role="alert">
           <p>{currentImageStatus.requestFailed
             ? '단계 이미지 생성 요청에 실패했어요. 다시 시도할 수 있어요.'
@@ -608,10 +637,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <button type="button" disabled={currentImageStatus.generating} onClick={() => { if (recipe) void requestStepImages(recipe) }}>{currentImageStatus.generating ? '이미지 재시도 중…' : '이미지 다시 시도하기'}</button>
         </div>}
         <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
-        <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={step.title} />
+        <div className="cook-media">
+          <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={step.title} />
+          {currentImageStatus?.generating && !step.image_url && <div className="cook-image-overlay" role="status">
+            <span className="cook-spinner" aria-hidden="true" />이미지를 만드는 중이에요
+          </div>}
+        </div>
         {!step.image_url && currentImageStatus?.failedOrders.includes(step.order) && <p className="cook-image-fallback-note">이 단계의 이미지 대신 임시 이미지를 보여드리고 있어요.</p>}
         <p className="cook-description">{step.description}</p>
-        {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
+        {step.tip && <div className="cook-ai-tip"><img className="cook-ai-icon" src="/images/ai-tip-icon.png" alt="" /><span>{step.tip}</span></div>}
         <nav className={`cook-controls ${cookStep === 0 ? 'is-first' : ''}`}>
           {cookStep > 0 && <button className="cook-prev" type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}
           <button className="feature-primary" type="button" onClick={() => cookStep === steps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === steps.length - 1 ? '요리 끝내기' : '다음 단계'}</button>
@@ -630,10 +664,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         <p className="feature-muted">이번 달 좋아요·저장 활동을 기준으로 선정했어요.</p>
       </header>
       <div className="food-list" aria-label="이달의 전승 음식 TOP 6">
-        {monthlyLoading && <p role="status">이달의 순위를 불러오는 중…</p>}
+        {monthlyLoading && <div className="monthly-loading" role="status" aria-label="이달의 순위를 불러오는 중">
+          <div className="monthly-loading-feature cook-skeleton" aria-hidden="true" />
+          <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
+          <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
+          <span className="visually-hidden">이달의 순위를 불러오는 중이에요.</span>
+        </div>
         {screenError && <p role="alert">{screenError}</p>}
         {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p className="monthly-empty">아직 이번 달에 소개할 전승 음식이 없어요.</p>}
-        {monthlyRecipes.map((item, index) => {
+        {!monthlyLoading && monthlyRecipes.map((item, index) => {
           const detail = monthlyDetails[item.recipe_id]
           const title = item.title || '이름 없는 레시피'
           const rank = String(item.rank ?? index + 1).padStart(2, '0')

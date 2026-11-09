@@ -104,17 +104,21 @@
   .recipe-detail-content ul li { @apply flex justify-between border-b border-[#eeeae4] px-4 py-3 text-sm text-[#6f6b64]; }
   .recipe-detail-content ol { @apply pl-5 text-sm leading-[1.8] text-[#6f6b64]; }
   .recipe-detail-content h3 { @apply font-serif text-base; }
-  .cook-page { @apply relative pt-[calc(env(safe-area-inset-top)+86px)] pb-[calc(env(safe-area-inset-bottom)+98px)]; }
-  .cook-topbar { @apply absolute left-[18px] right-[18px] flex h-7 items-center gap-3; top: calc(env(safe-area-inset-top) + 45px); }
-  .cook-topbar>button { @apply grid h-7 w-5 shrink-0 place-items-center border-0 bg-transparent p-0 text-[#514e48]; }
+  .cook-page { @apply relative min-h-svh bg-white px-[14px] pt-[calc(env(safe-area-inset-top)+71px)] pb-[calc(env(safe-area-inset-bottom)+104px)]; }
+  .cook-topbar { @apply absolute left-[14px] right-[14px] flex flex-col items-start gap-[11px]; top: calc(env(safe-area-inset-top) + 8px); }
+  .cook-topbar>button { @apply grid h-[30px] w-[30px] shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[#514e48]; }
   .cook-topbar>button svg { @apply h-5 w-5; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .cook-segments { @apply flex flex-1 gap-1.5; }
+  .cook-segments { @apply flex h-[2px] w-full flex-none gap-[6px]; }
   .cook-segments span { @apply h-[2px] flex-1 bg-[#e5e0d8]; }
   .cook-segments span.is-current { @apply bg-[#b9472f]; }
   .cook-step-title { @apply mb-4 mt-0 font-serif text-[16px] font-medium text-[#272621]; }
-  .cook-image { @apply h-[186px] w-full rounded-[6px] object-cover; }
-  .cook-image-progress { @apply mb-3 text-[12px] text-[#79756d]; }
-  .cook-image-failure { @apply mb-4 rounded-[6px] border border-[#e8c9bd] bg-[#fff4ef] px-3 py-3 text-[12px] leading-[1.6] text-[#914936]; }
+  .cook-media { @apply relative w-full overflow-hidden rounded-[7px] bg-[#f2eee7]; aspect-ratio:4/3; }
+  .cook-image { @apply h-full w-full object-cover; }
+  .cook-media .recipe-photo-empty { @apply h-full w-full; }
+  .cook-image-overlay { @apply absolute inset-x-2 bottom-2 flex items-center justify-center gap-2 rounded-md bg-[#fffaf0ef] px-3 py-2 text-[11px] text-[#635d54]; }
+  .cook-spinner { @apply h-3 w-3 rounded-full border-2 border-[#dbcabe] border-t-[#b9472f]; animation: cook-spin 800ms linear infinite; }
+  @keyframes cook-spin { to { transform:rotate(360deg); } }
+  .cook-image-failure { @apply mt-4 rounded-[6px] border border-[#e8c9bd] bg-[#fff4ef] px-3 py-3 text-[12px] leading-[1.6] text-[#914936]; }
   .cook-image-failure p { @apply m-0; }
   .cook-image-failure button { @apply mt-2 cursor-pointer rounded-[4px] border border-[#b9472f] bg-white px-3 py-2 text-[12px] font-semibold text-[#b9472f]; }
   .cook-image-failure button:disabled { @apply cursor-not-allowed opacity-60; }
@@ -122,12 +126,34 @@
   .cook-description { @apply mb-0 mt-5 min-h-[68px] text-[12px] leading-[1.7] text-[#5f5a52]; }
   .cook-ai-tip { @apply mt-7 flex min-h-[50px] items-center gap-3 rounded-[5px] bg-[#f2eee5] px-4 py-3 text-[11px] leading-[1.5] text-[#827a6d]; }
   .cook-ai-tip span { @apply text-[#5e5b54]; }
-  .cook-ai-mark { @apply grid h-6 w-6 shrink-0 place-items-center rounded-full border border-[#817a70] text-[8px] font-semibold; }
+  .cook-ai-icon { @apply h-[22px] w-[18px] shrink-0 object-contain; }
   .cook-error { @apply text-xs text-[#9a3828]; }
-  .cook-controls { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+20px)] left-1/2 z-[2] grid w-[min(calc(100%-44px),386px)] -translate-x-1/2 grid-cols-2 gap-2; }
+  .cook-controls { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+12px)] left-1/2 z-[2] grid w-[min(calc(100%-28px),386px)] -translate-x-1/2 grid-cols-[1fr_114px] gap-2; }
   .cook-controls.is-first .feature-primary { grid-column: 2; }
-  .cook-controls .cook-prev { @apply min-h-12 rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
-  .cook-controls .feature-primary { @apply m-0 min-h-12 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
+  .cook-controls .cook-prev { @apply min-h-10 w-[114px] rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
+  .cook-controls .feature-primary { @apply m-0 min-h-10 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
+  .cook-controls .feature-primary:disabled { @apply cursor-wait opacity-50; }
+  .cook-loading { @apply w-full; }
+  .cook-skeleton { display:block; background:linear-gradient(100deg,#ede9e3 25%,#f8f6f3 45%,#ede9e3 65%); background-size:240% 100%; animation:cook-skeleton-pulse 1.5s ease-in-out infinite; }
+  @keyframes cook-skeleton-pulse { from { background-position:100% 0; } to { background-position:-100% 0; } }
+  .cook-skeleton-heading { @apply mb-4 h-[22px] w-2/3 rounded-[4px]; }
+  .cook-skeleton-photo { @apply w-full rounded-[7px]; aspect-ratio:4/3; }
+  .cook-skeleton-line { @apply mt-5 h-[11px] w-full rounded-[4px]; }
+  .cook-skeleton-line.is-short { @apply mt-2 w-3/4; }
+  .cook-skeleton-tip { @apply mt-7 h-[64px] w-full rounded-[5px]; }
+  .recipe-loading { @apply w-full min-h-svh bg-white; }
+  .recipe-loading-cover { @apply h-[342px] w-full; }
+  .recipe-loading-details { @apply flex flex-col gap-5 px-[18px] pt-[25px]; }
+  .recipe-loading-title { @apply h-6 w-2/3 rounded-md; }
+  .recipe-loading-author { @apply h-9 w-1/2 rounded-md; }
+  .recipe-loading-quote { @apply h-[74px] w-full rounded-[9px]; }
+  .recipe-loading-lines { @apply h-24 w-full rounded-md; }
+  .monthly-loading { @apply flex flex-col gap-4; }
+  .monthly-loading-feature { @apply h-[300px] w-full rounded-[16px]; }
+  .monthly-loading-row { @apply h-[150px] w-full rounded-[16px]; }
+  @media (prefers-reduced-motion: reduce) {
+    .cook-skeleton,.cook-spinner { animation: none; }
+  }
   .monthly-page { @apply bg-[#f4efe8] pb-12; }
   .monthly-intro { @apply pb-3 pt-[66px]; }
   .monthly-eyebrow { @apply text-[10px] font-semibold tracking-[.22em] text-[#b34b35]; }

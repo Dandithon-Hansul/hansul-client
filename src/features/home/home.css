@@ -4,7 +4,7 @@
   .home-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+116px)] text-ink; padding-top: calc(env(safe-area-inset-top) + 103px); }
   .home-header { @apply absolute left-[22px] right-[22px] flex h-[42px] items-center justify-between; top: calc(env(safe-area-inset-top) + 38px); }
   .home-brand { @apply inline-flex items-center gap-[5px] font-serif text-[15px] text-brand-muted no-underline; }
-  .home-brand img { @apply h-[27px] w-[29px] object-contain; }
+  .home-brand img { @apply h-9 w-[29px] shrink-0 object-contain; }
   .profile-shortcut { @apply h-[34px] w-[34px] cursor-pointer border-0 bg-transparent p-px text-[#585149]; }
   .profile-shortcut svg { @apply block h-full w-full; }
   .home-intro h1 { @apply m-0 mb-[19px] font-serif text-[21px] font-bold leading-[1.42] tracking-[-.8px]; }
