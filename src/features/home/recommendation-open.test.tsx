@@ -23,7 +23,7 @@ describe('추천 음식 상세 이동', () => {
     await waitFor(() => expect(currentPath()).toHaveTextContent('/recipe?id=r-daegu-yukgaejang'))
   })
   it('상세 API가 400을 반환하면 잘못된 상세 화면으로 보내지 않고 오류 안내를 제공한다', async () => {
-    vi.mocked(getRecipe).mockRejectedValue(new ApiError(400, 'INVALID_RECIPE_ID', '잘못된 ID'))
+    vi.mocked(getRecipe).mockRejectedValueOnce(new ApiError(400, 'INVALID_RECIPE_ID', '잘못된 ID'))
     loginAsDemo()
     const user = renderApp('/')
     await user.click(await screen.findByRole('button', { name: /대구식 육개장/ }))

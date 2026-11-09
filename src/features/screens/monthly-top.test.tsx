@@ -34,7 +34,8 @@ describe('이달의 TOP 6 전체 목록', () => {
     const second = screen.getByRole('button', { name: /02 이번 달 인기 음식/ })
     expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText('이번 달 좋아요·저장 활동을 기준으로 선정했어요.')).toBeInTheDocument()
-    expect(screen.queryByText(/전승자/)).not.toBeInTheDocument()
+    expect(screen.getByText('MONTHLY FAVORITES')).toBeInTheDocument()
+    expect(first.closest('article')).toHaveClass('is-featured')
 
     await user.click(second)
     expect(currentPath()).toHaveTextContent('/recipe?id=monthly-uuid-1')

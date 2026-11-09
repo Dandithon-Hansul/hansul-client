@@ -608,7 +608,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <button type="button" disabled={currentImageStatus.generating} onClick={() => { if (recipe) void requestStepImages(recipe) }}>{currentImageStatus.generating ? '이미지 재시도 중…' : '이미지 다시 시도하기'}</button>
         </div>}
         <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
-        <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={recipe?.title || step.title} />
+        <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={step.title} />
         {!step.image_url && currentImageStatus?.failedOrders.includes(step.order) && <p className="cook-image-fallback-note">이 단계의 이미지 대신 임시 이미지를 보여드리고 있어요.</p>}
         <p className="cook-description">{step.description}</p>
         {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
