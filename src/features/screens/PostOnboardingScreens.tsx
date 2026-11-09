@@ -657,15 +657,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   if (page === 'monthly') return (
     <main className="feature-page monthly-page">
-      <PageHeader title="이달의 전승 음식" onBack={() => onNavigate('home')} />
-      <header className="monthly-intro">
-        <span className="monthly-eyebrow">MONTHLY FAVORITES</span>
-        <h1>이달의 전승 음식 <em>TOP 6</em></h1>
-        <p className="feature-muted">이번 달 좋아요·저장 활동을 기준으로 선정했어요.</p>
+      <header className="monthly-header">
+        <button className="monthly-back" type="button" aria-label="뒤로" onClick={() => onNavigate('home')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <h1>이달의 전승 음식 TOP 6</h1>
       </header>
       <div className="food-list" aria-label="이달의 전승 음식 TOP 6">
         {monthlyLoading && <div className="monthly-loading" role="status" aria-label="이달의 순위를 불러오는 중">
-          <div className="monthly-loading-feature cook-skeleton" aria-hidden="true" />
+          <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
           <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
           <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
           <span className="visually-hidden">이달의 순위를 불러오는 중이에요.</span>
@@ -676,20 +676,18 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           const detail = monthlyDetails[item.recipe_id]
           const title = item.title || '이름 없는 레시피'
           const rank = String(item.rank ?? index + 1).padStart(2, '0')
-          return <article className={`monthly-card ${index === 0 ? 'is-featured' : ''}`} key={item.recipe_id}>
+          const transmitterMeta = [detail?.transmitter_region, detail?.transmitter_name ? `${detail.transmitter_name} 전승자` : null]
+            .filter(Boolean).join(' · ')
+          return <article className="monthly-card" key={item.recipe_id}>
             <button className="monthly-card-open" type="button"
               aria-label={`${rank} ${title} 레시피 보기`}
               onClick={() => navigate(recipePath(item.recipe_id))}>
               <div className="monthly-card-media">
                 <RecipePhoto src={detail?.hero_image_url || item.hero_image_url} title={title} />
-                <span className="monthly-rank" aria-hidden="true">{rank}</span>
               </div>
               <div className="monthly-card-info">
-                {index === 0 && <span className="monthly-feature-label">이달의 가장 사랑받은 음식</span>}
-                <h2>{title}</h2>
-                {detail?.transmitter_name && <small>{detail.transmitter_name} 전승자의 레시피</small>}
-                {index === 0 && detail?.transmitter_quote && <p className="monthly-quote">“{detail.transmitter_quote}”</p>}
-                <span className="monthly-view-link" aria-hidden="true">레시피 보러 가기 <span>›</span></span>
+                <h2><span className="monthly-rank">{rank}</span> {title}</h2>
+                {transmitterMeta && <small>{transmitterMeta}</small>}
               </div>
             </button>
             <div className="monthly-reactions" aria-label={`${title} 좋아요와 스크랩`}>
