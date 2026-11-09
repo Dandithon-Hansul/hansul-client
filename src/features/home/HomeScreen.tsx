@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getHomeFeed, searchRecipes, type HomeFeed, type RecipeSearchResult } from '../../lib/api/home'
 import { getRecommendations, type RecommendationItem } from '../../lib/api/recipes'
+import { IS_MOCK } from '../../lib/env'
+import { isValidRecipeId } from '../../lib/recipeId'
 import './home.css'
 
 type HomeScreenProps = {
@@ -60,7 +62,9 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
   }
 
   const topRecipe = feed?.top_recipes[0]
-  const recommended = recommendations[0] ?? feed?.recommended[0]
+  const isUsableId = (id: unknown) => IS_MOCK || isValidRecipeId(id)
+  const recommended = recommendations.find((item) => isUsableId(item.recipe_id))
+    ?? feed?.recommended.find((item) => isUsableId(item.recipe_id))
 
   return (
     <div className="home-page">
