@@ -490,7 +490,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   }
 
   if (page === 'record') return (
-    <main className="feature-page">
+    <main className="feature-page record-page">
       <JourneyProgress stage={recording || recordingSeconds > 0 || busy || Boolean(draftId) ? 2 : 1} />
       <button className="journey-back" type="button" onClick={() => onNavigate('home')} aria-label="홈으로 돌아가기">‹</button>
       <div className="record-view">
@@ -518,7 +518,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           const canChooseAnswer = quoteStep === 'questions' && message.from === 'ai' && index === messages.length - 1
           const options = canChooseAnswer ? (analysis?.questions[0]?.options ?? []) : []
           return <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>
-            {message.from === 'ai' && <img className="chat-bot-avatar" src="/images/hansul-mark-alt.png" alt="" />}
+            {message.from === 'ai' && <span className="chat-bot-avatar" aria-hidden="true"><img src="/images/hansul-logo-mark.png" alt="" /></span>}
             <div className="chat-bubble-body">
               {message.from === 'ai' && <span className="chat-bot-name">한술봇</span>}
               <p>{message.text}</p>
