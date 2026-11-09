@@ -2,10 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
+import RecipePhoto from '../../components/RecipePhoto'
 import { createRecordingFile } from '../../lib/recordingFile'
 import { ApiError } from '../../lib/api/client'
+import { flowErrorMessage } from './recipeFlowError'
 import { useAuth } from '../auth/auth-context'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
 import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
 import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
 import { failedStepImageOrders, mergeStepImages } from './stepImageGeneration'
@@ -17,6 +19,18 @@ type Props = { page: FeaturePage; name: string; region: string; favoriteFoods: s
 
 function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return <header className="feature-header"><button type="button" onClick={onBack} aria-label="뒤로">‹</button><h1>{title}</h1><span /></header>
+}
+
+/** Three visual stages: before recording, recording/finishing, conversation. */
+function JourneyProgress({ stage }: { stage: 1 | 2 | 3 }) {
+  const labels = ['녹음 준비', '녹음 및 정리', '음식 이야기']
+  return <nav className="journey-progress" aria-label="음식 이야기 진행 단계">
+    {labels.map((label, index) => <span
+      className={index + 1 === stage ? 'is-current' : index + 1 < stage ? 'is-complete' : ''}
+      key={label}
+      aria-current={index + 1 === stage ? 'step' : undefined}
+    ><span className="journey-step-text">{label}</span></span>)}
+  </nav>
 }
 
 function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }: Props) {
@@ -35,7 +49,6 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [cookStep, setCookStep] = useState(0)
   const [searchParams] = useSearchParams()
   const [draftId, setDraftId] = useState('')
-  const [transcript, setTranscript] = useState('')
   const [recordError, setRecordError] = useState('')
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [monthlyRecipes, setMonthlyRecipes] = useState<HomeRecipe[]>([])
@@ -43,6 +56,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [monthlyActionBusy, setMonthlyActionBusy] = useState<string | null>(null)
   const [monthlyLoading, setMonthlyLoading] = useState(false)
   const [screenError, setScreenError] = useState('')
+  const [retryChatMessage, setRetryChatMessage] = useState('')
   const [stepImageStatus, setStepImageStatus] = useState<{
     recipeId: string
     generating: boolean
@@ -206,13 +220,14 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             const file = createRecordingFile(chunks, recorder.mimeType, 'recording')
             const signed = await uploadSignedFile(file, 'stt_audio')
             const result = await transcribe({ audio_path: sttAudioPath(signed) })
-            setTranscript(result.transcript)
             setDraftId(result.recipe_id)
             if (recordPhoto) {
               const photo = await uploadSignedFile(recordPhoto, 'chat_image', result.recipe_id)
               setChatImagePath(photo.path)
               setRecordPhoto(null)
             }
+            // The transcript stays on the server as a draft; continue to the conversation automatically.
+            await continueToChat(result.recipe_id)
           } catch (error) {
             setRecordError(error instanceof ApiError && error.status === 415
               ? '지원하지 않는 오디오 형식이에요. 다른 브라우저에서 다시 녹음해 주세요.'
@@ -230,6 +245,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   function finishRecording() {
     const recorder = mediaRecorder.current
     if (recorder && recorder.state !== 'inactive') {
+      setBusy(true)
       recorder.stop()
       setRecording(false)
     }
@@ -243,12 +259,13 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }])
   }
 
-  async function continueToChat() {
-    if (!draftId) return
+  async function continueToChat(completedDraftId?: string) {
+    const currentDraftId = completedDraftId || draftId
+    if (!currentDraftId) return
     setBusy(true)
     setScreenError('')
     try {
-      const result = await analyzeRecipe(draftId)
+      const result = await analyzeRecipe(currentDraftId)
       setAnalysis(result)
       setQuoteStep('questions')
       setTransmitterQuote('')
@@ -258,9 +275,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         setMessages([])
         beginQuoteStep()
       }
-    } catch {
-      setMessages([{ from: 'ai', text: '이 음식에 대해 더 자세히 이야기해 주세요.' }])
-      setScreenError('질문을 불러오지 못했어요. 메시지를 보내면 대화를 이어갈 수 있어요.')
+    } catch (error) {
+      setMessages([{ from: 'ai', text: '들려주신 음식 이야기를 조금 더 정리해 볼게요.' }])
+      setScreenError(flowErrorMessage(error, 'analysis'))
     } finally {
       setBusy(false)
       onNavigate('chat')
@@ -318,12 +335,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       { from: 'ai', text: CHAT_PENDING_TEXT, responseId },
     ])
     setSelectedSuggestion(message)
+    setRetryChatMessage('')
+    setScreenError('')
     setDraft('')
     stopChatAudio()
     setBusy(true)
     try {
       let answerText = ''
       let hasAudioSegments = false
+      let hadStreamError = false
       await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: true }, (event) => {
         if (event.event === 'chunk' && typeof event.data.text === 'string') {
           answerText += event.data.text
@@ -336,8 +356,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         if (event.event === 'done' && !hasAudioSegments && typeof event.data.audio_url === 'string') {
           enqueueChatAudio(event.data.audio_url)
         }
-        if (event.event === 'error') setScreenError(String(event.data.message ?? '채팅 처리 중 오류가 발생했어요.'))
+        if (event.event === 'error') hadStreamError = true
       })
+      if (hadStreamError && !answerText) throw new Error('CHAT_STREAM_FAILED')
       if (!answerText) setMessages((current) => current.filter((item) => item.responseId !== responseId))
       if (analysis?.questions.length) {
         const nextAnalysis = await analyzeRecipe(recipe_id)
@@ -352,7 +373,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       setChatImagePath(undefined)
     } catch {
       setMessages((current) => current.filter((item) => item.responseId !== responseId || item.text !== CHAT_PENDING_TEXT))
-      setScreenError('메시지를 보내지 못했어요.')
+      setRetryChatMessage(message)
     }
     finally { setBusy(false) }
   }
@@ -425,10 +446,19 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   }
 
   async function analyzeAndPublish() {
-    setBusy(true); setScreenError('')
+    if (busy) return
+    setScreenError('')
+    // Avoid repeatedly charging/retrying the analysis API while there are
+    // still explicit questions the user has not answered.
+    if (quoteStep === 'questions' && analysis?.questions.length) {
+      setScreenError('아직 확인할 손맛 질문이 있어요. 답변을 고르거나 직접 이야기해 주세요.')
+      return
+    }
+    if (quoteStep === 'input') return
+    setBusy(true)
     try {
       if (quoteStep === 'questions') {
-        const result = await analyzeRecipe(draftId || 'draft-mock')
+        const result = analysis ?? await analyzeRecipe(draftId || 'draft-mock')
         setAnalysis(result)
         if (result.questions.length) {
           setMessages((current) => [...current, { from: 'ai', text: result.questions[0].question }])
@@ -437,12 +467,14 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         }
         return
       }
-      if (quoteStep === 'input') return
       const published = await createRecipe(draftId || 'draft-mock', quoteStep === 'confirmed' ? transmitterQuote : undefined)
       setDraftId(published.recipe_id)
       navigate(`/recipe?id=${encodeURIComponent(published.recipe_id)}`)
-    } catch { setScreenError('레시피 분석 또는 발행에 실패했어요.') }
-    finally { setBusy(false) }
+    } catch (error) {
+      setScreenError(flowErrorMessage(error, quoteStep === 'questions' ? 'analysis' : 'publish'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   function sendMessage(event: FormEvent<HTMLFormElement>) {
@@ -458,8 +490,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   }
 
   if (page === 'record') return (
-    <main className="feature-page">
-      <PageHeader title="AI 음성 기록" onBack={() => onNavigate('home')} />
+    <main className="feature-page record-page">
+      <JourneyProgress stage={recording || recordingSeconds > 0 || busy || Boolean(draftId) ? 2 : 1} />
+      <button className="journey-back" type="button" onClick={() => onNavigate('home')} aria-label="홈으로 돌아가기">‹</button>
       <div className="record-view">
         <p className="feature-kicker">우리 집 손맛 기록</p>
         <h2>어떤 음식의 이야기를<br />남겨볼까요?</h2>
@@ -471,29 +504,40 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         {recordError && <p role="alert">{recordError}</p>}
         <div className="record-guidance"><small>이렇게 시작해 보세요</small><p>“오늘은 우리 집에서 40년 동안 만들어 온<br />소고기국 레시피를 알려줄게요.”</p></div>
         <label className={`photo-upload record-photo-button ${recordPhoto ? 'is-active' : ''}`}>{recordPhoto ? '사진이 추가됐어요' : '음식 사진 먼저 추가하기'}<input type="file" accept="image/*" onChange={(event) => setRecordPhoto(event.target.files?.[0] ?? null)} /></label>
-        {transcript && <div className="record-transcript" aria-live="polite"><span>음성 전사</span><p>{transcript}</p></div>}
-        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else void continueToChat() }}>기록 마무리 하기</button>
+        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else void continueToChat() }}>{busy ? '레시피 이야기를 정리하고 있어요…' : '기록 마무리 하기'}</button>
       </div>
     </main>
   )
 
   if (page === 'chat') return (
     <main className="feature-page chat-page">
-      <PageHeader title="음식 이야기" onBack={() => onNavigate('record')} />
-      <div className="chat-context"><span>AI 음성 기록</span><h2>어떤 음식의 이야기를<br />남겨볼까요?</h2></div>
+      <JourneyProgress stage={3} />
+      <button className="journey-back" type="button" onClick={() => onNavigate('record')} aria-label="녹음 화면으로 돌아가기">‹</button>
       <div className="chat-messages" aria-live="polite">
-        {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
+        {messages.map((message, index) => {
+          const canChooseAnswer = quoteStep === 'questions' && message.from === 'ai' && index === messages.length - 1
+          const options = canChooseAnswer ? (analysis?.questions[0]?.options ?? []) : []
+          return <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>
+            {message.from === 'ai' && <span className="chat-bot-avatar" aria-hidden="true"><img src="/images/hansul-logo-mark.png" alt="" /></span>}
+            <div className="chat-bubble-body">
+              {message.from === 'ai' && <span className="chat-bot-name">한술봇</span>}
+              <p>{message.text}</p>
+              {options.length > 0 && <div className="answer-options" aria-label="추천 답변">
+                {options.map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}
+              </div>}
+            </div>
+          </div>
+        })}
       </div>
-      {screenError && <p role="alert">{screenError}</p>}
+      {screenError && <p className="chat-notice" role="alert">{screenError}</p>}
+      {retryChatMessage && <button className="chat-retry" type="button" disabled={busy} onClick={() => void sendChatMessage(retryChatMessage)}>다시 보내기</button>}
       {chatAudioNeedsTap && <button type="button" className="chat-audio-retry" onClick={resumeChatAudio}>AI 답변 음성 재생하기</button>}
-      {quoteStep === 'questions' && <div className="answer-options" aria-label="추천 답변">{(analysis?.questions[0]?.options ?? []).map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}</div>}
       {(quoteStep === 'questions' || quoteStep === 'input') && <form className="chat-compose" onSubmit={sendMessage}><button className={`chat-mic ${chatVoiceRecording ? 'is-recording' : ''}`} type="button" aria-label={chatVoiceRecording ? '음성 입력 마치기' : '음성 입력'} onClick={() => void toggleChatVoice()} disabled={busy}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={quoteStep === 'input' ? '전하고 싶은 한마디 (선택)' : '메시지를 입력해 주세요'} aria-label={quoteStep === 'input' ? '전승자 한마디' : '메시지'} /><button className="chat-send" type="submit" aria-label={quoteStep === 'input' ? '한마디 확정' : '전송'} disabled={busy || !draft.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></svg></button></form>}
       {quoteStep === 'confirmed' && <div className="quote-review"><p>확정한 한마디: “{transmitterQuote}”</p><button type="button" disabled={busy} onClick={() => { setDraft(transmitterQuote); setQuoteStep('input') }}>한마디 수정</button></div>}
       {quoteStep === 'skipped' && <p className="quote-review">한마디 없이 레시피를 발행할게요.</p>}
       {quoteStep === 'input' && <button className="quote-skip" type="button" disabled={busy || chatVoiceRecording} onClick={() => { setDraft(''); setTransmitterQuote(''); setQuoteStep('skipped') }}>한마디 건너뛰기</button>}
       <button className="feature-primary chat-next" type="button" disabled={busy || !draftId || quoteStep === 'input'} onClick={() => void analyzeAndPublish()}>{busy ? '정리하고 있어요…' : quoteStep === 'questions' ? '레시피 만들러 가기 →' : quoteStep === 'input' ? '한마디를 입력하거나 건너뛰어 주세요' : '레시피 발행하기 →'}</button>
-      {analysis && <p className="feature-muted">재료 {analysis.structured.ingredients.length}개 · 조리 단계 {analysis.structured.steps.length}개를 분석했어요.</p>}
-      <button type="button" disabled={busy} onClick={() => { setBusy(true); void vectorizeSensoryProfile().then(() => setScreenError('손맛 프로파일을 업데이트했어요.')).catch(() => setScreenError('감각 기록이 더 쌓인 뒤 다시 시도해주세요.')).finally(() => setBusy(false)) }}>손맛 프로파일 업데이트</button>
+      <span className="journey-step-text" aria-live="polite">{analysis ? '레시피 정리 정보를 준비했어요' : '음식 이야기를 나누는 중이에요'}</span>
     </main>
   )
 
@@ -501,9 +545,19 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     <main className="feature-page recipe-page">
       {screenError && <p role="alert">{screenError}</p>}
       {!recipeId && <p role="alert">레시피를 찾을 수 없어요.</p>}
+      {!recipe && recipeId && !screenError && <div className="recipe-loading" role="status" aria-label="레시피를 불러오는 중">
+        <div className="recipe-loading-cover cook-skeleton" aria-hidden="true" />
+        <div className="recipe-loading-details">
+          <div className="cook-skeleton recipe-loading-title" aria-hidden="true" />
+          <div className="cook-skeleton recipe-loading-author" aria-hidden="true" />
+          <div className="cook-skeleton recipe-loading-quote" aria-hidden="true" />
+          <div className="cook-skeleton recipe-loading-lines" aria-hidden="true" />
+        </div>
+        <span className="visually-hidden">레시피를 불러오는 중이에요.</span>
+      </div>}
       {recipe && <>
         <section className="recipe-hero">
-          <img className="recipe-detail-image" src={recipe.hero_image_url ?? '/images/andong-jjimdak.png'} alt={recipe.title} />
+          <RecipePhoto className="recipe-detail-image" src={recipe.hero_image_url} title={recipe.title} />
           <span className="recipe-hero-gradient" />
           <button className="recipe-back" type="button" onClick={() => onNavigate('home')} aria-label="뒤로가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
           <div className="recipe-hero-actions">
@@ -529,9 +583,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             {(recipe.voice_message_url || recipe.transmitter_quote) && <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} aria-label={quotePlaying ? '한마디 음성 일시정지' : recipe.voice_message_url ? '한마디 음성 재생' : '한마디 기기 음성으로 읽기'}>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>
             </button>}
-            <div>{recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}
-              {!recipe.voice_message_url && recipe.transmitter_quote && <small>전승자 음성 파일이 없어 기기 음성으로 읽어드려요.</small>}
-            </div>
+            <div>{recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}</div>
             {recipe.voice_message_url && <audio ref={quoteAudio} src={recipe.voice_message_url} onPause={() => setQuotePlaying(false)} onEnded={() => setQuotePlaying(false)} onError={() => setScreenError('전승자의 음성을 재생하지 못했어요.')} />}
           </div>}
           <div className="recipe-stats"><span>{recipe.cooking_time}분 <small>조리시간</small></span><span>{recipe.difficulty} <small>난이도</small></span><span>{recipe.servings}인분 <small>인분</small></span></div>
@@ -546,17 +598,38 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     const steps = recipe?.steps ?? []
     const step = steps[cookStep]
     const currentImageStatus = stepImageStatus?.recipeId === recipe?.recipe_id ? stepImageStatus : null
-    if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => navigate(recipePath(recipeId))} /><p>{screenError || (recipeId ? '조리 단계를 불러오는 중…' : '레시피를 찾을 수 없어요.')}</p></main>
+    if (!step) return (
+      <main className="feature-page cook-page">
+        <header className="cook-topbar">
+          <div className="cook-segments" aria-label="조리 단계 불러오는 중"><span className="is-current" /><span /><span /></div>
+          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+          </button>
+        </header>
+        {screenError || !recipeId
+          ? <p className="cook-error" role="alert">{screenError || '레시피를 찾을 수 없어요.'}</p>
+          : <div className="cook-loading" role="status" aria-label="조리 단계를 불러오는 중">
+            <span className="cook-skeleton cook-skeleton-heading" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-photo" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-line" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-line is-short" aria-hidden="true" />
+            <span className="cook-skeleton cook-skeleton-tip" aria-hidden="true" />
+            <span className="visually-hidden">조리 단계를 불러오는 중이에요.</span>
+          </div>}
+        <nav className="cook-controls is-first" aria-label="조리 단계 이동">
+          <button className="feature-primary" type="button" disabled>다음 단계</button>
+        </nav>
+      </main>
+    )
     return (
       <main className="feature-page cook-page">
         <header className="cook-topbar">
-          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
           <div className="cook-segments" aria-label={`${cookStep + 1} / ${steps.length} 단계`}>
             {steps.map((item, index) => <span key={item.order} className={index === cookStep ? 'is-current' : ''} />)}
           </div>
+          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
         </header>
         {screenError && <p className="cook-error" role="alert">{screenError}</p>}
-        {currentImageStatus?.generating && <p className="cook-image-progress" role="status">단계 이미지를 생성하고 있어요. 조리는 계속할 수 있어요.</p>}
         {currentImageStatus && currentImageStatus.failedOrders.length > 0 && <div className="cook-image-failure" role="alert">
           <p>{currentImageStatus.requestFailed
             ? '단계 이미지 생성 요청에 실패했어요. 다시 시도할 수 있어요.'
@@ -564,10 +637,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <button type="button" disabled={currentImageStatus.generating} onClick={() => { if (recipe) void requestStepImages(recipe) }}>{currentImageStatus.generating ? '이미지 재시도 중…' : '이미지 다시 시도하기'}</button>
         </div>}
         <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
-        <img className="cook-image" src={step.image_url ?? recipe?.hero_image_url ?? '/images/andong-jjimdak.png'} alt={step.title} />
+        <div className="cook-media">
+          <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={step.title} recipeTitle={recipe?.title} />
+          {currentImageStatus?.generating && !step.image_url && <div className="cook-image-overlay" role="status">
+            <span className="cook-spinner" aria-hidden="true" />이미지를 만드는 중이에요
+          </div>}
+        </div>
         {!step.image_url && currentImageStatus?.failedOrders.includes(step.order) && <p className="cook-image-fallback-note">이 단계의 이미지 대신 임시 이미지를 보여드리고 있어요.</p>}
         <p className="cook-description">{step.description}</p>
-        {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
+        {step.tip && <div className="cook-ai-tip"><img className="cook-ai-icon" src="/images/ai-tip-icon.png" alt="" /><span>{step.tip}</span></div>}
         <nav className={`cook-controls ${cookStep === 0 ? 'is-first' : ''}`}>
           {cookStep > 0 && <button className="cook-prev" type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}
           <button className="feature-primary" type="button" onClick={() => cookStep === steps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === steps.length - 1 ? '요리 끝내기' : '다음 단계'}</button>
@@ -576,31 +654,59 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     )
   }
 
+
   if (page === 'monthly') return (
-    <main className="feature-page">
-      <PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} />
-      <div className="food-list">
-        <p className="feature-muted">이번 달 좋아요·저장 활동을 기준으로 선정했어요.</p>
-        {monthlyLoading && <p role="status">이달의 순위를 불러오는 중…</p>}
+    <main className="feature-page monthly-page">
+      <header className="monthly-header">
+        <button className="monthly-back" type="button" aria-label="뒤로" onClick={() => onNavigate('home')}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+        </button>
+        <h1>이달의 전승 음식 TOP 6</h1>
+      </header>
+      <div className="food-list" aria-label="이달의 전승 음식 TOP 6">
+        {monthlyLoading && <div className="monthly-loading" role="status" aria-label="이달의 순위를 불러오는 중">
+          <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
+          <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
+          <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
+          <span className="visually-hidden">이달의 순위를 불러오는 중이에요.</span>
+        </div>}
         {screenError && <p role="alert">{screenError}</p>}
-        {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p>아직 이번 달에 소개할 전승 음식이 없어요.</p>}
-        {monthlyRecipes.map((item, index) => {
+        {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p className="monthly-empty">아직 이번 달에 소개할 전승 음식이 없어요.</p>}
+        {!monthlyLoading && monthlyRecipes.map((item, index) => {
           const detail = monthlyDetails[item.recipe_id]
-          return <div className="food-list-card" key={item.recipe_id}>
-            <button className="food-list-open" type="button" onClick={() => navigate(recipePath(item.recipe_id))}>
-              <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
-              <span><b>{String(item.rank ?? index + 1).padStart(2, '0')} {item.title || '이름 없는 레시피'}</b></span>
-              <span aria-hidden="true">›</span>
+          const title = item.title || '이름 없는 레시피'
+          const rank = String(item.rank ?? index + 1).padStart(2, '0')
+          const transmitterMeta = [detail?.transmitter_region, detail?.transmitter_name ? `${detail.transmitter_name} 전승자` : null]
+            .filter(Boolean).join(' · ')
+          return <article className="monthly-card" key={item.recipe_id}>
+            <button className="monthly-card-open" type="button"
+              aria-label={`${rank} ${title} 레시피 보기`}
+              onClick={() => navigate(recipePath(item.recipe_id))}>
+              <div className="monthly-card-media">
+                <RecipePhoto src={detail?.hero_image_url || item.hero_image_url} title={title} />
+              </div>
+              <div className="monthly-card-info">
+                <h2><span className="monthly-rank">{rank}</span> {title}</h2>
+                {transmitterMeta && <small>{transmitterMeta}</small>}
+              </div>
             </button>
-            <div className="food-list-actions" aria-label={`${item.title} 좋아요와 스크랩`}>
-              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id} aria-pressed={detail?.is_liked ?? false} aria-label={`${item.title} ${detail?.is_liked ? '좋아요 취소' : '좋아요'}`} onClick={() => void updateMonthlyReaction(item.recipe_id, 'like')}>
-                <span aria-hidden="true">♥</span> {detail ? detail.like_count : '—'}
+            <div className="monthly-reactions" aria-label={`${title} 좋아요와 스크랩`}>
+              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id}
+                aria-pressed={detail?.is_liked ?? false}
+                aria-label={`${title} ${detail?.is_liked ? '좋아요 취소' : '좋아요'}`}
+                onClick={() => void updateMonthlyReaction(item.recipe_id, 'like')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 4.1-8.8 10-8.8 10S3.2 12.8 3.2 8.7a4.5 4.5 0 0 1 8.8 1.3 4.5 4.5 0 0 1 8.8 1.3Z"/></svg>
+                {detail ? detail.like_count : '—'}
               </button>
-              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id} aria-pressed={detail?.is_saved ?? false} aria-label={`${item.title} ${detail?.is_saved ? '스크랩 취소' : '스크랩'}`} onClick={() => void updateMonthlyReaction(item.recipe_id, 'save')}>
-                <span aria-hidden="true">▣</span> {detail ? detail.save_count : '—'}
+              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id}
+                aria-pressed={detail?.is_saved ?? false}
+                aria-label={`${title} ${detail?.is_saved ? '스크랩 취소' : '스크랩'}`}
+                onClick={() => void updateMonthlyReaction(item.recipe_id, 'save')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4-6 4z"/></svg>
+                {detail ? detail.save_count : '—'}
               </button>
             </div>
-          </div>
+          </article>
         })}
       </div>
     </main>

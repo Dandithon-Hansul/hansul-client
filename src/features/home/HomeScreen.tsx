@@ -1,7 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getHomeFeed, searchRecipes, type HomeFeed, type RecipeSearchResult } from '../../lib/api/home'
-import { getRecommendations, type RecommendationItem } from '../../lib/api/recipes'
+import { getRecipe, getRecommendations, type RecommendationItem } from '../../lib/api/recipes'
+import { ApiError } from '../../lib/api/client'
 import { IS_MOCK } from '../../lib/env'
+import RecipePhoto from '../../components/RecipePhoto'
 import { isValidRecipeId } from '../../lib/recipeId'
 import './home.css'
 
@@ -24,6 +26,10 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
   const [results, setResults] = useState<RecipeSearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState('')
+  const [recipeImages, setRecipeImages] = useState<Record<string, string | null>>({})
+  const [verifiedRecipes, setVerifiedRecipes] = useState<string[]>([])
+  const [recommendationError, setRecommendationError] = useState('')
+  const [openingRecommendation, setOpeningRecommendation] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -66,11 +72,52 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
   const recommended = recommendations.find((item) => isUsableId(item.recipe_id))
     ?? feed?.recommended.find((item) => isUsableId(item.recipe_id))
 
+  // Home DTO images may be storage paths rather than signed URLs. The detail API
+  // resolves actual recipe image URLs and verifies the card's UUID exists.
+  useEffect(() => {
+    if (IS_MOCK) return undefined
+    let active = true
+    const ids = [topRecipe?.recipe_id, recommended?.recipe_id]
+      .filter((candidate): candidate is string => isValidRecipeId(candidate))
+    for (const id of new Set(ids)) {
+      void getRecipe(id).then((recipe) => {
+        if (!active || recipe.recipe_id !== id) return
+        setRecipeImages((current) => ({ ...current, [id]: recipe.hero_image_url }))
+        setVerifiedRecipes((current) => current.includes(id) ? current : [...current, id])
+      }).catch(() => { /* Card remains visible; opening it retries with an actionable error. */ })
+    }
+    return () => { active = false }
+  }, [topRecipe?.recipe_id, recommended?.recipe_id])
+
+  async function openRecommendation(id: string) {
+    if (openingRecommendation) return
+    if (!isUsableId(id)) {
+      setRecommendationError('추천 레시피 정보가 올바르지 않아요. 다른 음식을 선택해 주세요.')
+      return
+    }
+    setRecommendationError('')
+    if (verifiedRecipes.includes(id)) {
+      onRecipeSelect(id)
+      return
+    }
+    setOpeningRecommendation(true)
+    try {
+      const recipe = await getRecipe(id)
+      if (recipe.recipe_id !== id) throw new Error('RECIPE_ID_MISMATCH')
+      onRecipeSelect(id)
+    } catch (error) {
+      const status = error instanceof ApiError ? `(${error.code} · ${error.status})` : ''
+      setRecommendationError(`이 추천 음식의 상세 정보를 열지 못했어요. ${status}`)
+    } finally {
+      setOpeningRecommendation(false)
+    }
+  }
+
   return (
     <div className="home-page">
       <header className="home-header">
         <a className="home-brand" href="/" onClick={(event) => { event.preventDefault(); onNavigate('home') }} aria-label="한술 홈">
-          <img src="/logo.svg" alt="" />
+          <img src="/images/hansul-logo-mark.png" alt="" />
           <span>한술</span>
         </a>
         <button className="profile-shortcut" type="button" aria-label="프로필" onClick={() => onNavigate('profile')}>
@@ -112,7 +159,7 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
               <span>이달의 전승 음식</span><span className="section-arrow" aria-hidden="true">›</span>
             </button>
             {topRecipe ? <button className="recipe-feature" type="button" onClick={() => onRecipeSelect(topRecipe.recipe_id)}>
-              {topRecipe.hero_image_url && <img src={topRecipe.hero_image_url} alt="" />}
+              <RecipePhoto className="home-recipe-photo" src={recipeImages[topRecipe.recipe_id] || topRecipe.hero_image_url} title={topRecipe.title || '전승 음식'} />
               <span className="recipe-gradient" />
               <span className="recipe-title">{String(topRecipe.rank ?? 1).padStart(2, '0')} {topRecipe.title}</span>
             </button> : <p className="home-empty">아직 소개할 전승 음식이 없어요.</p>}
@@ -120,8 +167,9 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
 
           <section className="recipe-section recommendation-section">
             <h2>{(feed?.greeting_name || name || '한술')}님을 위한 추천 음식</h2>
-            {recommended ? <button className="recipe-feature recommendation-card" type="button" onClick={() => onRecipeSelect(recommended.recipe_id)}>
-              {recommended.hero_image_url && <img src={recommended.hero_image_url} alt="" />}
+            {recommendationError && <p className="home-feed-error" role="alert">{recommendationError}</p>}
+            {recommended ? <button className="recipe-feature recommendation-card" type="button" disabled={openingRecommendation} onClick={() => void openRecommendation(recommended.recipe_id)}>
+              <RecipePhoto className="home-recipe-photo" src={recipeImages[recommended.recipe_id] || recommended.hero_image_url} title={recommended.title || '추천 음식'} />
               <span className="recipe-gradient" />
               {recommended.region_tag && <span className="recipe-location">{recommended.region_tag}</span>}
               <span className="recipe-title">{recommended.title}</span>
