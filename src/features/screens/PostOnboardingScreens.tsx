@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
+import { createRecordingFile } from '../../lib/recordingFile'
+import { ApiError } from '../../lib/api/client'
 import { useAuth } from '../auth/auth-context'
 import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
 import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
@@ -37,6 +39,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [recordError, setRecordError] = useState('')
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [monthlyRecipes, setMonthlyRecipes] = useState<HomeRecipe[]>([])
+  const [monthlyDetails, setMonthlyDetails] = useState<Record<string, RecipeDetail>>({})
+  const [monthlyActionBusy, setMonthlyActionBusy] = useState<string | null>(null)
   const [monthlyLoading, setMonthlyLoading] = useState(false)
   const [screenError, setScreenError] = useState('')
   const [stepImageStatus, setStepImageStatus] = useState<{
@@ -61,27 +65,66 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [chatAudioNeedsTap, setChatAudioNeedsTap] = useState(false)
   const imageGenerationRequested = useRef(new Set<string>())
   const imageGenerationInFlight = useRef(new Set<string>())
+  const monthlyActionInFlight = useRef(new Set<string>())
   // 예시 레시피(대구식 육개장)는 mock 에서만. 실제 서버에선 이 id 가 없어서 400
   const recipeId = searchParams.get('id') || draftId || (IS_MOCK ? 'r-daegu-yukgaejang' : '')
   useEffect(() => {
     if (page === 'recipe' || page === 'cook') {
       if (!recipeId) return undefined
       let active = true
-      getRecipe(recipeId).then((data) => { if (active) setRecipe(data) }).catch(() => { if (active) setScreenError('레시피를 불러오지 못했어요.') })
+      setRecipe(null)
+      setScreenError('')
+      getRecipe(recipeId).then((data) => { if (active) setRecipe(data) }).catch((error: unknown) => {
+        if (!active) return
+        const code = error instanceof ApiError ? ` (${error.code} · ${error.status})` : ''
+        setScreenError(`레시피를 불러오지 못했어요.${code}`)
+      })
       return () => { active = false }
     }
     if (page === 'monthly') {
       let active = true
       setMonthlyLoading(true)
       setScreenError('')
+      setMonthlyDetails({})
       getMonthlyTopRecipes()
-        .then((recipes) => { if (active) setMonthlyRecipes(recipes) })
+        .then((recipes) => {
+          if (!active) return
+          setMonthlyRecipes(recipes)
+          // The monthly home DTO intentionally has only id/title/rank/image.
+          // Fetch details to display the actual viewer's like/save state and counts.
+          for (const item of recipes) {
+            void getRecipe(item.recipe_id).then((detail) => {
+              if (active) setMonthlyDetails((current) => ({ ...current, [item.recipe_id]: detail }))
+            }).catch(() => { /* Keep navigation available if an individual detail fails. */ })
+          }
+        })
         .catch(() => { if (active) { setMonthlyRecipes([]); setScreenError('이달의 전승 음식 순위를 불러오지 못했어요.') } })
         .finally(() => { if (active) setMonthlyLoading(false) })
       return () => { active = false }
     }
     return undefined
   }, [page, recipeId])
+
+  async function updateMonthlyReaction(id: string, action: 'like' | 'save') {
+    if (!monthlyDetails[id] || monthlyActionInFlight.current.has(id)) return
+    monthlyActionInFlight.current.add(id)
+    setMonthlyActionBusy(id)
+    try {
+      const result = await toggleRecipe(id, action)
+      setMonthlyDetails((current) => {
+        const item = current[id]
+        if (!item) return current
+        return { ...current, [id]: action === 'like'
+          ? { ...item, is_liked: result.liked, like_count: result.like_count }
+          : { ...item, is_saved: result.saved, save_count: result.save_count } }
+      })
+    } catch {
+      setScreenError('좋아요 또는 스크랩을 변경하지 못했어요. 다시 시도해 주세요.')
+    } finally {
+      monthlyActionInFlight.current.delete(id)
+      setMonthlyActionBusy(null)
+    }
+  }
 
   async function requestStepImages(forRecipe: RecipeDetail) {
     const id = forRecipe.recipe_id
@@ -130,6 +173,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   useEffect(() => () => mediaStream.current?.getTracks().forEach((track) => track.stop()), [])
   useEffect(() => () => chatMediaStream.current?.getTracks().forEach((track) => track.stop()), [])
+  useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
   useEffect(() => () => {
     chatAudioQueue.current = []
     chatAudio.current?.pause()
@@ -156,7 +200,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data) }
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop())
-        const file = new File([new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })], 'recording.webm', { type: recorder.mimeType || 'audio/webm' })
+        const file = createRecordingFile(chunks, recorder.mimeType, 'recording')
         void (async () => {
           setBusy(true)
           try {
@@ -169,7 +213,11 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
               setChatImagePath(photo.path)
               setRecordPhoto(null)
             }
-          } catch { setRecordError('음성을 전사하지 못했어요. 다시 녹음해 주세요.') }
+          } catch (error) {
+            setRecordError(error instanceof ApiError && error.status === 415
+              ? '지원하지 않는 오디오 형식이에요. 다른 브라우저에서 다시 녹음해 주세요.'
+              : '음성을 전사하지 못했어요. 다시 녹음해 주세요.')
+          }
           finally { setBusy(false) }
         })()
       }
@@ -323,14 +371,18 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data) }
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop())
-        const file = new File([new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })], 'chat-recording.webm', { type: recorder.mimeType || 'audio/webm' })
+        const file = createRecordingFile(chunks, recorder.mimeType, 'chat-recording')
         void (async () => {
           setBusy(true)
           try {
             const signed = await uploadSignedFile(file, 'stt_audio', draftId || undefined)
             const result = await transcribe({ audio_path: sttAudioPath(signed), ...(draftId ? { recipe_id: draftId } : {}) })
             if (result.transcript) setDraft(result.transcript)
-          } catch { setScreenError('음성을 전사하지 못했어요.') }
+          } catch (error) {
+            setScreenError(error instanceof ApiError && error.status === 415
+              ? '지원하지 않는 오디오 형식이에요. 다시 녹음해 주세요.'
+              : '음성을 전사하지 못했어요.')
+          }
           finally { setBusy(false) }
         })()
       }
@@ -342,14 +394,34 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   async function toggleQuoteAudio() {
     const audio = quoteAudio.current
-    if (!audio) return
-    if (audio.paused) {
-      try { await audio.play(); setQuotePlaying(true) }
-      catch { setScreenError('전승자의 음성을 재생하지 못했어요.') }
-    } else {
-      audio.pause()
-      setQuotePlaying(false)
+    if (audio) {
+      if (audio.paused) {
+        try { await audio.play(); setQuotePlaying(true) }
+        catch { setScreenError('전승자의 음성을 재생하지 못했어요.') }
+      } else {
+        audio.pause()
+        setQuotePlaying(false)
+      }
+      return
     }
+    // Older recipes can have a text quote without a stored voice recording.
+    // This is explicitly labelled a device-generated voice, never the transmitter's real voice.
+    if (!recipe?.transmitter_quote) return
+    if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+      setScreenError('이 기기에서는 문구 읽어주기를 지원하지 않아요.')
+      return
+    }
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel()
+      setQuotePlaying(false)
+      return
+    }
+    const utterance = new SpeechSynthesisUtterance(recipe.transmitter_quote)
+    utterance.lang = 'ko-KR'
+    utterance.onend = () => setQuotePlaying(false)
+    utterance.onerror = () => { setQuotePlaying(false); setScreenError('문구를 읽어주지 못했어요.') }
+    setQuotePlaying(true)
+    window.speechSynthesis.speak(utterance)
   }
 
   async function analyzeAndPublish() {
@@ -454,10 +526,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             <div><strong>{recipe.transmitter_name} 전승자</strong>{recipe.transmitter_region && <small>{recipe.transmitter_region}</small>}</div>
           </button>
           {(recipe.transmitter_quote || recipe.voice_message_url) && <div className="recipe-quote-card">
-            {recipe.voice_message_url && <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} aria-label={quotePlaying ? '한마디 음성 일시정지' : '한마디 음성 재생'}>
+            {(recipe.voice_message_url || recipe.transmitter_quote) && <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} aria-label={quotePlaying ? '한마디 음성 일시정지' : recipe.voice_message_url ? '한마디 음성 재생' : '한마디 기기 음성으로 읽기'}>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>
             </button>}
-            {recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}
+            <div>{recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}
+              {!recipe.voice_message_url && recipe.transmitter_quote && <small>전승자 음성 파일이 없어 기기 음성으로 읽어드려요.</small>}
+            </div>
             {recipe.voice_message_url && <audio ref={quoteAudio} src={recipe.voice_message_url} onPause={() => setQuotePlaying(false)} onEnded={() => setQuotePlaying(false)} onError={() => setScreenError('전승자의 음성을 재생하지 못했어요.')} />}
           </div>}
           <div className="recipe-stats"><span>{recipe.cooking_time}분 <small>조리시간</small></span><span>{recipe.difficulty} <small>난이도</small></span><span>{recipe.servings}인분 <small>인분</small></span></div>
@@ -510,13 +584,24 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         {monthlyLoading && <p role="status">이달의 순위를 불러오는 중…</p>}
         {screenError && <p role="alert">{screenError}</p>}
         {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p>아직 이번 달에 소개할 전승 음식이 없어요.</p>}
-        {monthlyRecipes.map((item, index) => (
-          <button className="food-list-card" type="button" key={item.recipe_id} onClick={() => navigate(recipePath(item.recipe_id))}>
-            <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
-            <span><b>{String(item.rank ?? index + 1).padStart(2, '0')} {item.title || '이름 없는 레시피'}</b></span>
-            <span aria-hidden="true">›</span>
-          </button>
-        ))}
+        {monthlyRecipes.map((item, index) => {
+          const detail = monthlyDetails[item.recipe_id]
+          return <div className="food-list-card" key={item.recipe_id}>
+            <button className="food-list-open" type="button" onClick={() => navigate(recipePath(item.recipe_id))}>
+              <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
+              <span><b>{String(item.rank ?? index + 1).padStart(2, '0')} {item.title || '이름 없는 레시피'}</b></span>
+              <span aria-hidden="true">›</span>
+            </button>
+            <div className="food-list-actions" aria-label={`${item.title} 좋아요와 스크랩`}>
+              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id} aria-pressed={detail?.is_liked ?? false} aria-label={`${item.title} ${detail?.is_liked ? '좋아요 취소' : '좋아요'}`} onClick={() => void updateMonthlyReaction(item.recipe_id, 'like')}>
+                <span aria-hidden="true">♥</span> {detail ? detail.like_count : '—'}
+              </button>
+              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id} aria-pressed={detail?.is_saved ?? false} aria-label={`${item.title} ${detail?.is_saved ? '스크랩 취소' : '스크랩'}`} onClick={() => void updateMonthlyReaction(item.recipe_id, 'save')}>
+                <span aria-hidden="true">▣</span> {detail ? detail.save_count : '—'}
+              </button>
+            </div>
+          </div>
+        })}
       </div>
     </main>
   )
