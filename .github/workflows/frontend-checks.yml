@@ -42,6 +42,9 @@ jobs:
               ("/api/health", "status"),
               ("/api/home?limit=6", "top_recipes"),
               ("/api/recipes?sort=popular&limit=6", "recipes"),
+              ("/api/search/recipes?q=jjimdak&limit=6", "recipes"),
+              ("/api/map/regions", "regions"),
+              ("/api/map/regions/47170/recipes?limit=6", "recipes"),
           ]
           errors = 0
           for path, field in checks:
@@ -79,5 +82,13 @@ jobs:
                       print("WARNING: direct localhost:5173 -> backend browser requests may be blocked by CORS; configure Vite proxy for local development", flush=True)
           except Exception as exc:
               print(f"WARNING: CORS preflight check could not complete: {exc}", flush=True)
+          try:
+              with urllib.request.urlopen(urllib.request.Request(
+                  base + "/api/health",
+                  headers={"Origin": "http://localhost:5173", "Accept": "application/json"}
+              ), timeout=30) as response:
+                  print(f"CORS GET: HTTP {response.status}, allow-origin={response.headers.get('Access-Control-Allow-Origin')!r}", flush=True)
+          except Exception as exc:
+              print(f"WARNING: CORS GET diagnostic unavailable: {exc}", flush=True)
           sys.exit(1 if errors else 0)
           PY
