@@ -123,12 +123,17 @@
   .cook-controls .cook-prev { @apply min-h-12 rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
   .cook-controls .feature-primary { @apply m-0 min-h-12 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
   .food-list { @apply flex flex-col gap-[13px] pt-[30px]; }
-  .food-list-card { @apply grid w-full grid-cols-[88px_1fr_20px] items-center gap-3 rounded-lg border border-[#f0ede7] bg-white p-2 text-left; }
-  .food-list-card img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }
-  .food-list-card span:nth-child(2) { @apply flex flex-col gap-[6px]; }
-  .food-list-card b { @apply text-xs; }
-  .food-list-card small { @apply text-[10px] text-[#8c877e]; }
-  .food-list-card span:last-child { @apply text-[22px] text-[#807a71]; }
+  .food-list-card { @apply w-full rounded-lg border border-[#f0ede7] bg-white p-2; }
+  .food-list-open { @apply grid w-full cursor-pointer grid-cols-[88px_1fr_20px] items-center gap-3 border-0 bg-transparent p-0 text-left; }
+  .food-list-open img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }
+  .food-list-open b { @apply text-xs; }
+  .food-list-open span:last-child { @apply text-[22px] text-[#807a71]; }
+  .food-list-actions { @apply mt-2 flex justify-end gap-2 border-t border-[#f0ede7] pt-2; }
+  .food-list-actions button { @apply flex min-h-8 cursor-pointer items-center gap-1 rounded-md border border-[#e5ded4] bg-white px-3 text-[12px] text-[#655f55]; }
+  .food-list-actions button[aria-pressed="true"] { @apply border-[#b9472f] bg-[#fff4ef] text-[#b9472f]; }
+  .food-list-actions button:disabled { @apply cursor-not-allowed opacity-50; }
+  .food-list-actions button span { @apply text-base; }
+  .recipe-quote-card small { @apply block text-[10px] leading-[1.5] text-[#817b71]; }
   .profile-summary { @apply flex flex-col items-center px-0 pt-[45px] pb-7 text-center; }
   .profile-avatar { @apply grid h-[82px] w-[82px] place-items-center rounded-full bg-[#dfe5db] text-[29px] text-[#64745e]; }
   .profile-summary h2 { @apply mt-[13px] text-xl; }

@@ -303,6 +303,7 @@ export async function uploadSignedFile(
 ) {
   if (IS_MOCK)
     return { bucket: "mock", path: `${purpose}/${file.name}`, token: "mock" };
+  const contentType = file.type.split(';')[0].trim().toLowerCase();
   const signed = await apiFetch<{
     bucket: string;
     path: string;
@@ -311,7 +312,7 @@ export async function uploadSignedFile(
     method: "POST",
     json: {
       purpose,
-      content_type: file.type,
+      content_type: contentType,
       size_bytes: file.size,
       ...(recipeId ? { recipe_id: recipeId } : {}),
     },
@@ -319,7 +320,7 @@ export async function uploadSignedFile(
   const { error } = await getSupabase()
     .storage.from(signed.bucket)
     .uploadToSignedUrl(signed.path, signed.token, file, {
-      contentType: file.type,
+      contentType,
     });
   if (error)
     throw new ApiError(500, "STORAGE_ERROR", "파일을 올리지 못했어요.");
