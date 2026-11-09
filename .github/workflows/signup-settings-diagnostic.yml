@@ -1,0 +1,66 @@
+name: Temporary production signup settings diagnostic
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  check-hosted-signup-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read published Supabase auth settings without signing up users
+        run: |
+          python3 - <<'PY'
+          import json, re
+          import urllib.parse
+          import urllib.request
+          import urllib.error
+
+          def req(url, headers=None):
+              try:
+                  with urllib.request.urlopen(urllib.request.Request(url, headers=headers or {}), timeout=25) as r:
+                      return r.status, r.read(500000)
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read(500000)
+
+          site = "https://hansul-client.vercel.app"
+          supabase = "https://ksshvrioacbqnzoalgeb.supabase.co"
+          for path in ["/", "/signup", "/login"]:
+              status, _ = req(site + path)
+              print(f"FRONTEND {path}: HTTP {status}", flush=True)
+          # Production build already exposes a public Supabase publishable key;
+          # only inspect it locally, never print or store its value.
+          key = None
+          try:
+              _, html = req(site)
+              paths = re.findall(r'src="([^"]+)"', html.decode(errors="replace"))
+              for src in paths:
+                  if not urllib.parse.urlparse(src).path.endswith(".js"):
+                      continue
+                  status, bundle = req(urllib.parse.urljoin(site, src))
+                  if status != 200:
+                      continue
+                  m = re.search(rb'sb_publishable_[A-Za-z0-9_-]+', bundle)
+                  if m:
+                      key = m.group().decode("utf-8")
+                      break
+          except Exception as exc:
+              print(f"Cannot locate frontend public key: {type(exc).__name__}", flush=True)
+
+          headers = {"apikey": key} if key else {}
+          code, body = req(supabase + "/auth/v1/settings", headers)
+          print(f"SUPABASE GET /auth/v1/settings: HTTP {code}", flush=True)
+          try:
+              config = json.loads(body)
+              if code == 200:
+                  print("disable_signup:", config.get("disable_signup"), flush=True)
+                  print("email_provider_enabled:", config.get("external", {}).get("email"), flush=True)
+                  print("mailer_autoconfirm:", config.get("mailer_autoconfirm"), flush=True)
+                  print("auth_settings_keys:", sorted(config.keys()), flush=True)
+              else:
+                  print("auth_settings_error:", config.get("code") or config.get("msg") or config.get("message") or "unknown", flush=True)
+          except Exception as exc:
+              print("settings response non-JSON:", type(exc).__name__, flush=True)
+          PY
