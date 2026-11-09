@@ -669,7 +669,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
           <div className="monthly-loading-row cook-skeleton" aria-hidden="true" />
           <span className="visually-hidden">이달의 순위를 불러오는 중이에요.</span>
-        </div>
+        </div>}
         {screenError && <p role="alert">{screenError}</p>}
         {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p className="monthly-empty">아직 이번 달에 소개할 전승 음식이 없어요.</p>}
         {!monthlyLoading && monthlyRecipes.map((item, index) => {
