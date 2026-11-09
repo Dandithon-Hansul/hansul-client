@@ -240,18 +240,6 @@ export async function generateStepImages(recipeId: string) {
         json: { recipe_id: recipeId },
       });
 }
-export async function regenerateStepImage(
-  recipeId: string,
-  order: number,
-  hint?: string,
-) {
-  return IS_MOCK
-    ? { image_url: "" }
-    : apiFetch<{ image_url: string }>(`/api/steps/${order}/image`, {
-        method: "POST",
-        json: { recipe_id: recipeId, hint },
-      });
-}
 export async function analyzeRecipe(recipeId: string) {
   return IS_MOCK
     ? ({
@@ -326,14 +314,6 @@ export async function uploadSignedFile(
   if (error)
     throw new ApiError(500, "STORAGE_ERROR", "파일을 올리지 못했어요.");
   return signed;
-}
-export async function uploadRecipeVoice(recipeId: string, audio_path: string) {
-  return IS_MOCK
-    ? { voice_message_url: "" }
-    : apiFetch<{ voice_message_url: string }>(
-        `/api/recipes/${encodeURIComponent(recipeId)}/voice`,
-        { method: "POST", json: { audio_path } },
-      );
 }
 export async function sendRecipeChat(
   body: {
