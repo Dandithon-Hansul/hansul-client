@@ -5,6 +5,7 @@ import { IS_MOCK } from '../../lib/env'
 import { useAuth } from '../auth/auth-context'
 import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
 import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
+import { failedStepImageOrders, mergeStepImages } from './stepImageGeneration'
 import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
@@ -36,6 +37,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [monthlyRecipes, setMonthlyRecipes] = useState<RecipeListItem[]>([])
   const [screenError, setScreenError] = useState('')
+  const [stepImageStatus, setStepImageStatus] = useState<{
+    recipeId: string
+    generating: boolean
+    failedOrders: number[]
+    requestFailed: boolean
+  } | null>(null)
   const [busy, setBusy] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [quotePlaying, setQuotePlaying] = useState(false)
@@ -51,6 +58,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const chatAudioBlocked = useRef(false)
   const [chatAudioNeedsTap, setChatAudioNeedsTap] = useState(false)
   const imageGenerationRequested = useRef(new Set<string>())
+  const imageGenerationInFlight = useRef(new Set<string>())
   // 예시 레시피(대구식 육개장)는 mock 에서만. 실제 서버에선 이 id 가 없어서 400
   const recipeId = searchParams.get('id') || draftId || (IS_MOCK ? 'r-daegu-yukgaejang' : '')
   useEffect(() => {
@@ -68,6 +76,41 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     return undefined
   }, [page, recipeId])
 
+  async function requestStepImages(forRecipe: RecipeDetail) {
+    const id = forRecipe.recipe_id
+    if (imageGenerationInFlight.current.has(id)) return
+    imageGenerationInFlight.current.add(id)
+    setStepImageStatus((current) => ({
+      recipeId: id,
+      generating: true,
+      failedOrders: current?.recipeId === id ? current.failedOrders : [],
+      requestFailed: false,
+    }))
+    try {
+      // The backend reuses successful step images, so retrying this batch keeps existing work.
+      const result = await generateStepImages(id)
+      setRecipe((current) => current?.recipe_id === id
+        ? { ...current, steps: mergeStepImages(current.steps, result.generated) }
+        : current)
+      setStepImageStatus({
+        recipeId: id,
+        generating: false,
+        failedOrders: failedStepImageOrders(forRecipe.steps, result),
+        requestFailed: false,
+      })
+    } catch {
+      // A request-level error gives no failed_orders: allow retry for all still-missing steps.
+      setStepImageStatus({
+        recipeId: id,
+        generating: false,
+        failedOrders: forRecipe.steps.filter((step) => !step.image_url).map((step) => step.order),
+        requestFailed: true,
+      })
+    } finally {
+      imageGenerationInFlight.current.delete(id)
+    }
+  }
+
   useEffect(() => {
     if (page !== 'cook' || !recipe || recipe.recipe_id !== recipeId) return
     // 단계 이미지 생성은 작성자만 가능 (백엔드 /api/steps/images 가 작성자 레시피만 찾음) — 다른 사람 레시피면 요청하지 않음
@@ -75,15 +118,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     const hasMissingStepImage = recipe.steps.some((step) => !step.image_url)
     if (!hasMissingStepImage || imageGenerationRequested.current.has(recipe.recipe_id)) return
     imageGenerationRequested.current.add(recipe.recipe_id)
-    void generateStepImages(recipe.recipe_id).then((result) => {
-      setRecipe((current) => current && current.recipe_id === recipe.recipe_id ? {
-        ...current,
-        steps: current.steps.map((step) => {
-          const generated = result.generated.find((image) => image.order === step.order)
-          return generated ? { ...step, image_url: generated.image_url } : step
-        }),
-      } : current)
-    }).catch(() => setScreenError('단계 이미지를 불러오지 못했어요.'))
+    void requestStepImages(recipe)
   }, [page, recipe, recipeId, session?.userId])
 
   useEffect(() => () => mediaStream.current?.getTracks().forEach((track) => track.stop()), [])
@@ -429,6 +464,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   if (page === 'cook') {
     const steps = recipe?.steps ?? []
     const step = steps[cookStep]
+    const currentImageStatus = stepImageStatus?.recipeId === recipe?.recipe_id ? stepImageStatus : null
     if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => navigate(recipePath(recipeId))} /><p>{screenError || (recipeId ? '조리 단계를 불러오는 중…' : '레시피를 찾을 수 없어요.')}</p></main>
     return (
       <main className="feature-page cook-page">
@@ -439,8 +475,16 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           </div>
         </header>
         {screenError && <p className="cook-error" role="alert">{screenError}</p>}
+        {currentImageStatus?.generating && <p className="cook-image-progress" role="status">단계 이미지를 생성하고 있어요. 조리는 계속할 수 있어요.</p>}
+        {currentImageStatus && currentImageStatus.failedOrders.length > 0 && <div className="cook-image-failure" role="alert">
+          <p>{currentImageStatus.requestFailed
+            ? '단계 이미지 생성 요청에 실패했어요. 다시 시도할 수 있어요.'
+            : `${currentImageStatus.failedOrders.length}개 단계의 이미지를 생성하지 못했어요. 다시 시도할 수 있어요.`}</p>
+          <button type="button" disabled={currentImageStatus.generating} onClick={() => { if (recipe) void requestStepImages(recipe) }}>{currentImageStatus.generating ? '이미지 재시도 중…' : '이미지 다시 시도하기'}</button>
+        </div>}
         <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
         <img className="cook-image" src={step.image_url ?? recipe?.hero_image_url ?? '/images/andong-jjimdak.png'} alt={step.title} />
+        {!step.image_url && currentImageStatus?.failedOrders.includes(step.order) && <p className="cook-image-fallback-note">이 단계의 이미지 대신 임시 이미지를 보여드리고 있어요.</p>}
         <p className="cook-description">{step.description}</p>
         {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
         <nav className={`cook-controls ${cookStep === 0 ? 'is-first' : ''}`}>

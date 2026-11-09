@@ -107,6 +107,12 @@
   .cook-segments span.is-current { @apply bg-[#b9472f]; }
   .cook-step-title { @apply mb-4 mt-0 font-serif text-[16px] font-medium text-[#272621]; }
   .cook-image { @apply h-[186px] w-full rounded-[6px] object-cover; }
+  .cook-image-progress { @apply mb-3 text-[12px] text-[#79756d]; }
+  .cook-image-failure { @apply mb-4 rounded-[6px] border border-[#e8c9bd] bg-[#fff4ef] px-3 py-3 text-[12px] leading-[1.6] text-[#914936]; }
+  .cook-image-failure p { @apply m-0; }
+  .cook-image-failure button { @apply mt-2 cursor-pointer rounded-[4px] border border-[#b9472f] bg-white px-3 py-2 text-[12px] font-semibold text-[#b9472f]; }
+  .cook-image-failure button:disabled { @apply cursor-not-allowed opacity-60; }
+  .cook-image-fallback-note { @apply mt-2 text-[11px] text-[#817b71]; }
   .cook-description { @apply mb-0 mt-5 min-h-[68px] text-[12px] leading-[1.7] text-[#5f5a52]; }
   .cook-ai-tip { @apply mt-7 flex min-h-[50px] items-center gap-3 rounded-[5px] bg-[#f2eee5] px-4 py-3 text-[11px] leading-[1.5] text-[#827a6d]; }
   .cook-ai-tip span { @apply text-[#5e5b54]; }
