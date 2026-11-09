@@ -97,11 +97,11 @@ export type PublicProfile = {
 
 /**
  * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기" (명세서: 역할 선택 없음)
- * region_code: 지역을 건너뛰면 null (⚠️ 백엔드는 아직 필수 — 허용 여부 확인 중)
+ * region_code: 필수 — 지역이 없으면 발행한 레시피가 지도에 안 나와서 온보딩에서 건너뛰기를 막음 (백엔드와 합의)
  */
 export type ProfileSetupBody = {
   display_name: string
-  region_code: string | null
+  region_code: string
   food_preferences: string[]
 }
 

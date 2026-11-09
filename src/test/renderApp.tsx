@@ -40,7 +40,7 @@ export function loginAsNewUser(withProfile = false) {
       id: userId,
       display_name: '새내기',
       avatar_url: null,
-      region: null,
+      region: null, // 건너뛰기를 막기 전에 가입한 계정 (지역 없음)
       bio: null,
       food_preferences: [],
       stats: { transmitted_recipes: 0, saved_recipes: 0, likes_received: 0 },

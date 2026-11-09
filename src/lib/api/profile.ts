@@ -84,14 +84,14 @@ export async function setupProfile(body: ProfileSetupBody): Promise<ProfileSetup
   await wait(MOCK_DELAY_MS)
   const db = readMockDb()
   const userId = mockUserId()
-  const region = body.region_code ? findRegionByCode(body.region_code) : undefined
-  if (body.region_code && !region) throw new ApiError(422, 'INVALID_REGION', '지역 코드가 올바르지 않아요.')
+  const region = findRegionByCode(body.region_code)
+  if (!region) throw new ApiError(422, 'INVALID_REGION', '지역 코드가 올바르지 않아요.')
   const previous = db.profiles[userId]
   db.profiles[userId] = {
     id: userId,
     display_name: body.display_name,
     avatar_url: previous?.avatar_url ?? null,
-    region: region ? { ...region, dong: null } : null,
+    region: { ...region, dong: null },
     bio: previous?.bio ?? null,
     food_preferences: body.food_preferences,
     stats: previous?.stats ?? { transmitted_recipes: 0, saved_recipes: 0, likes_received: 0 },

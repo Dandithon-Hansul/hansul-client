@@ -12,7 +12,7 @@ const FOOD_MAX = 2 // Figma: 복수선택 최대 2개
 type Props = {
   name: string
   setName: (name: string) => void
-  /** 거주 지역 행정코드 (예: 안동시 47170). 건너뛰면 '' */
+  /** 거주 지역 행정코드 (예: 안동시 47170). 고르기 전엔 '' */
   regionCode: string
   setRegionCode: (code: string) => void
   favoriteFoods: string[]
@@ -35,9 +35,8 @@ function OnboardingFlow({ name, setName, regionCode, setRegionCode, favoriteFood
   const [error, setError] = useState<string | null>(null)
   const region = findRegionByCode(regionCode)
 
-  // 1단계: 이름 필수 / 2단계: 지역은 건너뛰기 가능 (Figma) / 3단계: 음식 1개 이상
-  const canContinue = step === 0 ? Boolean(name.trim()) : step === 1 ? true : favoriteFoods.length > 0
-  const isSkip = step === 1 && !region
+  // 1단계: 이름 필수 / 2단계: 지역 필수 (기능 명세서: 미선택 시 다음 비활성 — 지역이 없으면 레시피가 지도에 안 나옴) / 3단계: 음식 1개 이상
+  const canContinue = step === 0 ? Boolean(name.trim()) : step === 1 ? Boolean(region) : favoriteFoods.length > 0
 
   async function continueFlow(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -119,8 +118,8 @@ function OnboardingFlow({ name, setName, regionCode, setRegionCode, favoriteFood
 
       <form className="onboarding-bottom" onSubmit={continueFlow}>
         {error && <p className="onboarding-error" role="alert">{error}</p>}
-        <button type="submit" className={isSkip ? 'is-skip' : ''} disabled={!canContinue} aria-busy={submitting}>
-          {step === 2 ? (submitting ? '저장 중…' : '한술 시작하기') : isSkip ? '건너뛰기' : '다음'}
+        <button type="submit" disabled={!canContinue} aria-busy={submitting}>
+          {step === 2 ? (submitting ? '저장 중…' : '한술 시작하기') : '다음'}
         </button>
       </form>
     </main>
