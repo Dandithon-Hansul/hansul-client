@@ -41,6 +41,10 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const chatMediaRecorder = useRef<MediaRecorder | null>(null)
   const chatMediaStream = useRef<MediaStream | null>(null)
   const quoteAudio = useRef<HTMLAudioElement | null>(null)
+  const chatAudio = useRef<HTMLAudioElement | null>(null)
+  const chatAudioQueue = useRef<string[]>([])
+  const chatAudioBlocked = useRef(false)
+  const [chatAudioNeedsTap, setChatAudioNeedsTap] = useState(false)
   const imageGenerationRequested = useRef(new Set<string>())
   const recipeId = searchParams.get('id') || draftId || 'r-daegu-yukgaejang'
   useEffect(() => {
@@ -75,6 +79,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   useEffect(() => () => mediaStream.current?.getTracks().forEach((track) => track.stop()), [])
   useEffect(() => () => chatMediaStream.current?.getTracks().forEach((track) => track.stop()), [])
+  useEffect(() => () => {
+    chatAudioQueue.current = []
+    chatAudio.current?.pause()
+    chatAudio.current = null
+    chatAudioBlocked.current = false
+  }, [page])
 
   useEffect(() => {
     if (!recording) return undefined
@@ -158,21 +168,72 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }
   }
 
+  function stopChatAudio() {
+    chatAudioQueue.current = []
+    chatAudio.current?.pause()
+    chatAudio.current = null
+    chatAudioBlocked.current = false
+    setChatAudioNeedsTap(false)
+  }
+
+  function playNextChatAudio() {
+    if (chatAudio.current || chatAudioBlocked.current) return
+    const url = chatAudioQueue.current.shift()
+    if (!url) return
+    const audio = new Audio(url)
+    chatAudio.current = audio
+    const finish = () => {
+      if (chatAudio.current !== audio) return
+      chatAudio.current = null
+      playNextChatAudio()
+    }
+    audio.onended = finish
+    audio.onerror = finish
+    void audio.play().then(() => setChatAudioNeedsTap(false)).catch(() => {
+      if (chatAudio.current !== audio) return
+      chatAudio.current = null
+      chatAudioQueue.current.unshift(url)
+      chatAudioBlocked.current = true
+      setChatAudioNeedsTap(true)
+    })
+  }
+
+  function enqueueChatAudio(url: string) {
+    if (!url.startsWith('https://') && !url.startsWith('http://')) return
+    chatAudioQueue.current.push(url)
+    playNextChatAudio()
+  }
+
+  function resumeChatAudio() {
+    chatAudioBlocked.current = false
+    setChatAudioNeedsTap(false)
+    playNextChatAudio()
+  }
+
   async function sendChatMessage(message: string) {
     const recipe_id = draftId || 'draft-mock'
     setMessages((current) => [...current, { from: 'user', text: message }])
     setSelectedSuggestion(message)
     setDraft('')
+    stopChatAudio()
     setBusy(true)
     try {
       let answerText = ''
-      await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: false }, (event) => {
+      let hasAudioSegments = false
+      await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: true }, (event) => {
         if (event.event === 'chunk' && typeof event.data.text === 'string') {
           answerText += event.data.text
           setMessages((current) => {
             const withoutPending = current.at(-1)?.from === 'ai' && current.at(-1)?.text === '답변을 작성하고 있어요…' ? current.slice(0, -1) : current
             return [...withoutPending, { from: 'ai', text: answerText }]
           })
+        }
+        if (event.event === 'audio' && typeof event.data.url === 'string') {
+          hasAudioSegments = true
+          enqueueChatAudio(event.data.url)
+        }
+        if (event.event === 'done' && !hasAudioSegments && typeof event.data.audio_url === 'string') {
+          enqueueChatAudio(event.data.audio_url)
         }
         if (event.event === 'error') setScreenError(String(event.data.message ?? '채팅 처리 중 오류가 발생했어요.'))
       })
@@ -295,6 +356,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={`${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
       </div>
       {screenError && <p role="alert">{screenError}</p>}
+      {chatAudioNeedsTap && <button type="button" className="chat-audio-retry" onClick={resumeChatAudio}>AI 답변 음성 재생하기</button>}
       {quoteStep === 'questions' && <div className="answer-options" aria-label="추천 답변">{(analysis?.questions[0]?.options ?? []).map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}</div>}
       {(quoteStep === 'questions' || quoteStep === 'input') && <form className="chat-compose" onSubmit={sendMessage}><button className={`chat-mic ${chatVoiceRecording ? 'is-recording' : ''}`} type="button" aria-label={chatVoiceRecording ? '음성 입력 마치기' : '음성 입력'} onClick={() => void toggleChatVoice()} disabled={busy}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={quoteStep === 'input' ? '전하고 싶은 한마디 (선택)' : '메시지를 입력해 주세요'} aria-label={quoteStep === 'input' ? '전승자 한마디' : '메시지'} /><button className="chat-send" type="submit" aria-label={quoteStep === 'input' ? '한마디 확정' : '전송'} disabled={busy || !draft.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></svg></button></form>}
       {quoteStep === 'confirmed' && <div className="quote-review"><p>확정한 한마디: “{transmitterQuote}”</p><button type="button" disabled={busy} onClick={() => { setDraft(transmitterQuote); setQuoteStep('input') }}>한마디 수정</button></div>}

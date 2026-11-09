@@ -63,6 +63,7 @@
   .quote-review p { @apply my-1; }
   .quote-review button { @apply mt-2 cursor-pointer border-0 bg-transparent p-0 text-[12px] underline underline-offset-2; }
   .quote-skip { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+136px)] left-1/2 -translate-x-1/2 cursor-pointer border-0 bg-transparent p-2 text-[12px] text-[#605c55] underline underline-offset-2; }
+  .chat-audio-retry { @apply shrink-0 cursor-pointer rounded-md border border-[#50604b] bg-white px-3 py-2 text-[12px] text-[#50604b]; }
   .recipe-page { @apply px-0 pt-0; }
   .recipe-hero { @apply relative h-[342px] w-full overflow-hidden; }
   .recipe-detail-image { @apply absolute inset-0 block h-full w-full object-cover; }
