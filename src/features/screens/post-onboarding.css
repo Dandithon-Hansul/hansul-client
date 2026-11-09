@@ -111,7 +111,6 @@
   .cook-controls.is-first .feature-primary { grid-column: 2; }
   .cook-controls .cook-prev { @apply min-h-12 rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
   .cook-controls .feature-primary { @apply m-0 min-h-12 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
-  .cook-evaluation { @apply mt-8; }
   .food-list { @apply flex flex-col gap-[13px] pt-[30px]; }
   .food-list-card { @apply grid w-full grid-cols-[88px_1fr_20px] items-center gap-3 rounded-lg border border-[#f0ede7] bg-white p-2 text-left; }
   .food-list-card img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }
