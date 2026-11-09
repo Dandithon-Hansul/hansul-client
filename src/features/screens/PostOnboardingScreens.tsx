@@ -333,13 +333,13 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             {recipe.transmitter_avatar_url ? <img src={recipe.transmitter_avatar_url} alt="" /> : <span className="recipe-author-fallback" aria-hidden="true">{recipe.transmitter_name.slice(0, 1)}</span>}
             <div><strong>{recipe.transmitter_name} 전승자</strong>{recipe.transmitter_region && <small>{recipe.transmitter_region}</small>}</div>
           </button>
-          <div className="recipe-quote-card">
-            <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} disabled={!recipe.voice_message_url} aria-label={quotePlaying ? '한마디 음성 일시정지' : '한마디 음성 재생'}>
+          {(recipe.transmitter_quote || recipe.voice_message_url) && <div className="recipe-quote-card">
+            {recipe.voice_message_url && <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} aria-label={quotePlaying ? '한마디 음성 일시정지' : '한마디 음성 재생'}>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>
-            </button>
-            <p>“{recipe.transmitter_quote}”</p>
-            {recipe.voice_message_url && <audio ref={quoteAudio} src={recipe.voice_message_url} onEnded={() => setQuotePlaying(false)} />}
-          </div>
+            </button>}
+            {recipe.transmitter_quote && <p>“{recipe.transmitter_quote}”</p>}
+            {recipe.voice_message_url && <audio ref={quoteAudio} src={recipe.voice_message_url} onPause={() => setQuotePlaying(false)} onEnded={() => setQuotePlaying(false)} onError={() => setScreenError('전승자의 음성을 재생하지 못했어요.')} />}
+          </div>}
           <div className="recipe-stats"><span>{recipe.cooking_time}분 <small>조리시간</small></span><span>{recipe.difficulty} <small>난이도</small></span><span>{recipe.servings}인분 <small>인분</small></span></div>
           <h3>재료</h3><ul>{recipe.ingredients.map((item) => <li key={item.name}>{item.name} <span>{item.amount ?? ''}{item.unit ?? ''}</span></li>)}</ul>
           <button className="feature-primary" type="button" onClick={() => { setCookStep(0); onNavigate('cook') }}>단계별로 따라 만들기</button>

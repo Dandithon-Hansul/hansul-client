@@ -15,11 +15,11 @@ export type RecipeDetail = {
   recipe_id: string;
   title: string;
   hero_image_url: string | null;
-  transmitter_id?: string;
+  transmitter_id: string;
   transmitter_name: string;
   transmitter_avatar_url?: string | null;
   transmitter_region?: string | null;
-  transmitter_quote: string;
+  transmitter_quote: string | null;
   context_summary: string;
   voice_message_url: string | null;
   cooking_time: number;
@@ -180,7 +180,7 @@ export async function getRecommendations(
           title: mockDetail.title,
           hero_image_url: mockDetail.hero_image_url,
           region_tag: "대구 향토음식",
-          transmitter_quote: mockDetail.transmitter_quote,
+          transmitter_quote: mockDetail.transmitter_quote ?? "",
         },
       ],
     };
