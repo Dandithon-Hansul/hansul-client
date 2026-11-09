@@ -1,7 +1,5 @@
 // API 명세서 v0.1 기준 타입 (필요한 것부터 추가)
 
-export type Role = 'transmitter' | 'learner'
-
 export type Region = {
   code: string
   sido: string
@@ -12,10 +10,11 @@ export type Region = {
 /** GET /api/profiles/me */
 export type MyProfile = {
   id: string
-  role: Role
   display_name: string
   avatar_url: string | null
   region: Region | null
+  /** 소개 한 줄 (⚠️ 백엔드 GET /api/profiles/me 응답에 아직 없음 → 없으면 null) */
+  bio: string | null
   food_preferences: string[]
   stats: {
     transmitted_recipes: number
@@ -37,6 +36,8 @@ export type ProfileUpdateBody = {
   region_code?: string
   food_preferences?: string[]
   avatar_url?: string | null
+  /** 소개 — 비우면 null (⚠️ 백엔드 PATCH 스키마에 bio 추가 요청 중) */
+  bio?: string | null
 }
 
 /** 프로필 그리드 한 칸에 필요한 최소 정보 */
@@ -65,36 +66,46 @@ export type CursorPage<T> = {
   nextCursor: string | null
 }
 
-/**
- * 다른 사용자(전승자) 프로필
- * ⚠️ API 명세서에 아직 없음 — GET /api/profiles/:id 로 가정. bio(소개글)도 DB 컬럼 추가 필요
- */
+/** GET /api/profiles/:id 응답 그대로 (백엔드 hansul-server develop 기준 — 명세서 목록엔 아직 없음) */
+export type RawPublicProfile = {
+  profile_id: string
+  display_name: string
+  avatar_url: string | null
+  /** 지역 이름 글자 ("안동시") */
+  region: string | null
+  bio: string | null
+  recipe_count: number
+  received_like_count: number
+  recipes: RecipeThumb[]
+}
+
+/** 다른 사용자(전승자) 프로필 — 화면에서 쓰기 좋게 정리한 형태 */
 export type PublicProfile = {
   id: string
   display_name: string
   avatar_url: string | null
   region: Region | null
+  /** 지역 코드로 못 찾았을 때 그대로 보여줄 글자 */
+  region_text: string | null
   bio: string | null
   stats: {
     transmitted_recipes: number
     likes_received: number
   }
+  recipes: RecipeThumb[]
 }
 
 /**
- * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기"
- * region_code: 지역을 건너뛰면 null (⚠️ 백엔드에서 null 허용 필요)
- * role: 팀 결정으로 역할을 나누지 않아 기본값을 보냄
+ * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기" (명세서: 역할 선택 없음)
+ * region_code: 필수 — 지역이 없으면 발행한 레시피가 지도에 안 나와서 온보딩에서 건너뛰기를 막음 (백엔드와 합의)
  */
 export type ProfileSetupBody = {
   display_name: string
-  region_code: string | null
+  region_code: string
   food_preferences: string[]
-  role: Role
 }
 
 export type ProfileSetupResponse = {
   profile_id: string
-  role: Role
   start_route: string
 }

@@ -1,8 +1,8 @@
 @reference "../../index.css";
 
 @layer components {
-  .home-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+116px)] text-ink; padding-top: calc(env(safe-area-inset-top) + 139px); }
-  .home-header { @apply absolute left-[22px] right-[22px] flex h-[42px] items-center justify-between; top: calc(env(safe-area-inset-top) + 74px); }
+  .home-page { @apply min-h-svh bg-canvas px-[22px] pb-[calc(env(safe-area-inset-bottom)+116px)] text-ink; padding-top: calc(env(safe-area-inset-top) + 103px); }
+  .home-header { @apply absolute left-[22px] right-[22px] flex h-[42px] items-center justify-between; top: calc(env(safe-area-inset-top) + 38px); }
   .home-brand { @apply inline-flex items-center gap-[5px] font-serif text-[15px] text-brand-muted no-underline; }
   .home-brand img { @apply h-[27px] w-[29px] object-contain; }
   .profile-shortcut { @apply h-[34px] w-[34px] cursor-pointer border-0 bg-transparent p-px text-[#585149]; }
@@ -11,7 +11,19 @@
   .recipe-search { @apply flex h-12 items-center gap-2.5 rounded-[28px] border border-dashed border-[#bfb9af] px-[17px] text-[#aaa399]; }
   .recipe-search input { @apply w-full border-0 bg-transparent text-xs text-[#34362f] outline-none; }
   .recipe-search input::placeholder { @apply text-[#aaa399]; }
+  .recipe-search button { @apply grid h-8 w-8 shrink-0 cursor-pointer place-items-center border-0 bg-transparent p-0 text-[#aaa399]; }
+  .recipe-search button:disabled { @apply cursor-wait opacity-60; }
   .recipe-search svg { @apply h-[19px] w-[19px]; fill: none; stroke: currentColor; stroke-width: 1.7; }
+  .home-search-results { @apply mt-4 rounded-[12px] bg-white p-3 shadow-[0_2px_14px_#29251d0d]; }
+  .home-search-results h2 { @apply m-0 mb-2 font-serif text-sm font-bold; }
+  .home-search-results p { @apply m-0 py-2 text-xs text-[#817b71]; }
+  .home-search-result { @apply flex w-full cursor-pointer items-center gap-3 border-0 border-t border-solid border-[#eeeae3] bg-transparent py-2 text-left; }
+  .home-search-result img { @apply h-12 w-12 shrink-0 rounded-[7px] object-cover; }
+  .home-search-result span { @apply flex min-w-0 flex-col gap-1; }
+  .home-search-result b { @apply truncate text-sm font-semibold text-ink; }
+  .home-search-result small { @apply text-[11px] text-[#817b71]; }
+  .home-feed-error { @apply mt-7 rounded-[10px] bg-[#f8ece8] p-3 text-sm text-[#8d3827]; }
+  .home-empty { @apply rounded-[9px] bg-white px-4 py-7 text-center text-sm text-[#817b71]; }
   .record-promo { @apply relative mt-[23px] flex h-[152px] w-full cursor-pointer flex-col items-start justify-between overflow-hidden rounded-[9px] border-0 bg-brand-muted px-[22px] pb-[18px] pt-7 text-left text-white; }
   .record-promo-title { @apply font-serif text-[15px] font-bold leading-[1.6]; }
   .record-promo-link { @apply text-xs; }
@@ -45,3 +57,4 @@
   .home-header { left: calc(50% - 193px); right: calc(50% - 193px); }
   .home-bottom-nav { bottom: 24px; }
 }
+

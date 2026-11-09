@@ -42,4 +42,12 @@
   .signup-hint { @apply m-0 px-px text-xs text-[#9e9b95]; }
   .signup-bottom { @apply mt-auto pt-8; }
   .signup-bottom .auth-submit { @apply h-12 text-[17px] font-normal; }
+
+  /* 로그인 직후 프로필 확인 실패 (서버 연결·주소·토큰 문제) — 가입·로그인 화면 위에도 덮어서 보여줌 */
+  .profile-check-error { @apply fixed inset-y-0 left-1/2 z-50 flex w-full max-w-[430px] -translate-x-1/2 flex-col items-center justify-center gap-3 bg-canvas px-8 text-center text-[#252525]; }
+  .profile-check-error h2 { @apply m-0 text-[17px] font-semibold; }
+  .profile-check-error p { @apply m-0 text-sm text-[#5e5850]; }
+  .profile-check-error small { @apply text-[11px] text-[#9e9b95]; }
+  .profile-check-error .auth-submit { @apply mt-4 max-w-[320px]; }
+  .profile-check-logout { @apply cursor-pointer border-0 bg-transparent p-1 text-xs text-[#7e7e87] underline underline-offset-4; }
 }

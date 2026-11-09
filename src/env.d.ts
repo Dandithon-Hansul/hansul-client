@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string
   readonly VITE_AUTH_EMAIL_DOMAIN?: string
   readonly VITE_API_BASE_URL?: string
+  readonly VITE_KAKAO_MAP_KEY?: string
 }
 
 interface ImportMeta {

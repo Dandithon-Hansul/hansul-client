@@ -3,8 +3,20 @@ import { describe, expect, it } from 'vitest'
 import { readMockDb } from '../../lib/mock/mockDb'
 import { currentPath, loginAsNewUser, renderApp } from '../../test/renderApp'
 
+type User = ReturnType<typeof renderApp>
+
+/** 2단계에서 지역 시트를 열어 고르고 '다음'까지 누름 */
+async function pickRegion(user: User, sido: '대구광역시' | '경상북도', district: string) {
+  await user.click(screen.getByRole('button', { name: /지역을 설정해주세요/ }))
+  const sheet = screen.getByRole('dialog')
+  await user.click(within(sheet).getByRole('tab', { name: sido }))
+  await user.click(within(sheet).getByRole('button', { name: district }))
+  await user.click(within(sheet).getByRole('button', { name: '선택완료' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
+}
+
 describe('온보딩 (Figma 최종 디자인)', () => {
-  it('이름 → 지역(건너뛰기 가능) → 음식(최대 2개) 순서로 진행한다', async () => {
+  it('이름 → 지역(필수) → 음식(최대 2개) 순서로 진행한다', async () => {
     loginAsNewUser(false)
     const user = renderApp('/onboarding')
 
@@ -15,8 +27,9 @@ describe('온보딩 (Figma 최종 디자인)', () => {
     await user.type(screen.getByLabelText('어떤 이름을 사용하실 건가요?'), '김한술')
     await user.click(screen.getByRole('button', { name: '다음' }))
 
-    // 2단계: 지역 안 고르면 "건너뛰기", 고르면 시·군 이름만 표시하고 "다음"
-    expect(screen.getByRole('button', { name: '건너뛰기' })).toBeEnabled()
+    // 2단계: 지역을 골라야 "다음" (건너뛰기 없음 — 지역이 없으면 레시피가 지도에 안 나옴)
+    expect(screen.getByRole('button', { name: '다음' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: '건너뛰기' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /지역을 설정해주세요/ }))
     const sheet = screen.getByRole('dialog')
     await user.click(within(sheet).getByRole('tab', { name: '경상북도' }))
@@ -56,19 +69,20 @@ describe('온보딩 (Figma 최종 디자인)', () => {
 
     await user.type(await screen.findByLabelText('어떤 이름을 사용하실 건가요?'), '새요리사')
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.click(screen.getByRole('button', { name: '건너뛰기' }))
+    await pickRegion(user, '대구광역시', '대구광역시')
     await user.click(screen.getByRole('button', { name: '찜·조림' }))
     await user.click(screen.getByRole('button', { name: '한술 시작하기' }))
 
-    // 서버(mock)에 프로필이 저장됨 — 지역은 건너뛰어서 null
+    // 서버(mock)에 프로필이 저장됨 — 대구는 군위 포함 하나(27000)
     expect(await screen.findByText(/오늘은 어떤 맛의 기억을/)).toBeInTheDocument()
     const saved = readMockDb().profiles['mock-user-newcook']
-    expect(saved).toMatchObject({ display_name: '새요리사', region: null, food_preferences: ['찜·조림'], role: 'transmitter' })
+    expect(saved).toMatchObject({ display_name: '새요리사', region: { code: '27000' }, food_preferences: ['찜·조림'] })
+    expect(saved).not.toHaveProperty('role') // 명세서: 역할 선택 없음
 
     // 홈 → 프로필: 온보딩이 아니라 마이페이지가 나와야 함
     await user.click(screen.getByRole('button', { name: '프로필' }))
     expect(await screen.findByText('새요리사')).toBeInTheDocument()
-    expect(screen.getByText('지역 미설정')).toBeInTheDocument()
+    expect(screen.getByText('대구광역시')).toBeInTheDocument()
     expect(currentPath()).toHaveTextContent('/profile')
   })
 
@@ -83,7 +97,7 @@ describe('온보딩 (Figma 최종 디자인)', () => {
 
     // 온보딩을 끝내면 그다음부터는 홈·프로필이 정상
     await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.click(screen.getByRole('button', { name: '건너뛰기' }))
+    await pickRegion(user, '경상북도', '경주시')
     await user.click(screen.getByRole('button', { name: '구이' }))
     await user.click(screen.getByRole('button', { name: '한술 시작하기' }))
     await user.click(await screen.findByRole('button', { name: '프로필' }))

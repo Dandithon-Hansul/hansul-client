@@ -96,6 +96,7 @@ npm run dev -- --host 0.0.0.0
 | `VITE_AUTH_EMAIL_DOMAIN` | 아이디 → 이메일 변환용 도메인 (기본 `hansul.app`) |
 | `VITE_API_BASE_URL` | 배포된 백엔드 주소. 비우면 같은 주소의 `/api` |
 | `VITE_API_PROXY_TARGET` | 개발 중 `/api` 를 넘겨줄 로컬 백엔드 (예: `http://localhost:3000`) |
+| `VITE_KAKAO_MAP_KEY` | 카카오맵 JavaScript 키. 비우면 키 없이 동작하는 SVG 지도 |
 
 ### 화면 주소
 
@@ -105,9 +106,10 @@ npm run dev -- --host 0.0.0.0
 | `/onboarding` | 온보딩 3단계 | O |
 | `/` | 홈 | O |
 | `/profile` (`?tab=saved`) | 마이페이지 (나의 레시피 / 저장한 맛) | O |
-| `/profile/edit` | 프로필 편집 (사진·이름·거주지역, 로그아웃) | O |
+| `/profile/edit` | 프로필 편집 (사진·이름·소개·거주지역, 로그아웃) | O |
 | `/users/:id` | 다른 사용자(전승자) 프로필 — mock 예시 `/users/u-kim-hansul` | O |
-| `/record` `/chat` `/recipe` `/cook` `/monthly` `/map` | 기존 화면 | O |
+| `/map` (`?region=47170`) | 지역의 맛 지도 — 지역 선택 → 인기 레시피 카드 → 목록 팝업 | O |
+| `/record` `/chat` `/recipe` `/cook` `/monthly` | 기존 화면 | O |
 
 기존 컴포넌트의 `onNavigate('record')` 호출은 그대로 쓰면 되고, `App.tsx` 에서 주소로 바꿔 이동합니다.
 
@@ -115,10 +117,32 @@ npm run dev -- --host 0.0.0.0
 
 **mock 모드** (`VITE_USE_MOCK=true`): 데모 계정 `hansul` / `hansul123` 은 프로필이 있어 로그인하면 홈으로, 새로 가입한 계정은 프로필이 없어 온보딩으로 갑니다. 가짜 데이터 초기화는 개발자 도구 콘솔에서 `localStorage.removeItem('hansul.mock.db')`.
 
-**실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 백엔드 `/api/profiles/me` 가 아직 없으면 로그인 후 홈으로 갑니다.
+**실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 가입·로그인 직후 `GET /api/profiles/me` 가 404 면 온보딩, 그 밖의 이유로 실패하면 '내 정보를 불러오지 못했어요' 화면에 원인 코드가 나옵니다 — `INVALID_RESPONSE · 200` 은 백엔드 주소 미설정(`VITE_API_PROXY_TARGET`/`VITE_API_BASE_URL`), `NETWORK_ERROR` 는 서버 연결·CORS, `UNAUTHORIZED · 401` 은 프론트와 백엔드의 Supabase 프로젝트가 다른 경우.
 
 ### 백엔드에 요청할 것 (프로필)
 
-- `GET /api/profiles/:id`, `GET /api/profiles/:id/recipes` — 다른 사용자 프로필 (명세서에 없음), 소개글 `bio` 컬럼
-- 프로필 사진: Supabase Storage `avatars` 공개 버킷 + 본인 폴더(`{user_id}/`)만 업로드 허용 정책. 프론트가 직접 올리고 주소를 `PATCH /api/profiles/me` 의 `avatar_url` 로 보냄
+- ⚠️ 소개(`bio`): DB 칸은 있고 다른 사람 프로필 응답에도 나오지만, `GET /api/profiles/me` 응답에 없고 `PATCH /api/profiles/me` 가 `bio` 를 안 받음(엄격 검사라 보내면 실패) — 둘 다 추가 요청 중. 프론트는 소개를 바꿨을 때만 `bio` 를 보내서 이름·사진·지역 저장에는 영향 없음
+- 반영 완료: `GET /api/profiles/:id`(사진 서명 URL 포함), 대구 `27000`(대구 전체) 허용 — 백엔드 PR #33
+- 프로필 사진: 반영 완료 — `POST /api/uploads/sign`(purpose `avatar`) → `uploadToSignedUrl` → `PATCH /api/profiles/me` 에 경로 전달 (`src/lib/storage.ts`)
+- 온보딩 지역은 필수 (백엔드와 합의) — 지역이 없으면 발행한 레시피가 지도에 안 나와서 '건너뛰기'를 없애고 고르기 전엔 '다음' 비활성 (기능 명세서 기준)
 - 거주지역은 `region_code`(행정코드 5자리, 예: 안동시 `47170`)로 보냄 — 목록은 `src/lib/regions.ts`
+
+### 지역 지도 (`/map`)
+
+- **화면 (Figma 지도 화면 기준)**: 경북은 연두, 대구는 살구색, 바깥 테두리는 진한 초록, 시·군 사이는 흰 선. 처음엔 하단에 홈과 같은 메뉴(홈·지도·마이크)가 있고, 지역을 누르면 그 지역으로 확대되며 빨간 핀과 구역 색(진한 살구)으로 표시되고 하단 메뉴 대신 "OO 지역의 인기 레시피" 시트가 올라옵니다.
+- **시트**: 접힌 상태에선 1위 카드 하나. 카드를 누르거나 위로 끌면 목록이 펼쳐지고(레시피가 1개면 바로 상세), 목록에서 레시피를 누르면 상세로 갑니다. 아래로 끌거나 Esc 를 누르면 펼침 → 접힘 → 닫힘(선택 해제) 순서로 돌아갑니다.
+- **조작**: 탭으로 지역 선택, 끌어서 이동, 두 손가락·휠로 확대·축소. 대구는 실제 크기에선 작아서 확대했을 때 구·군 이름이 나옵니다. 울릉도·독도는 왼쪽 위 점선 상자에 당겨 그립니다.
+- **카카오맵 (선택)**: `VITE_KAKAO_MAP_KEY` 가 있으면 카카오맵 위에 같은 색으로 경계를 겹쳐 그리고, 없거나 실패하면 위 기본 지도를 씁니다. Figma 가 그림 지도 스타일이라 기본은 키 없이 씁니다.
+- **경계 데이터**: `public/geo/daegu-gyeongbuk.geojson`(지역 23개)과 `daegu-gyeongbuk-overlay.geojson`(바깥 테두리·경계선·대구 구·군) — 통계청 SGIS 행정동 경계(공공누리 제1유형)를 가공한 [vuski/admdongkor](https://github.com/vuski/admdongkor) ver20261001(CC BY 4.0)에서 대구는 하나(27000, 2023년 편입된 군위군 포함), 경북은 22개 시·군으로 합쳐 한 번에 단순화했습니다. 출처 표시는 지도 오른쪽 위에 있습니다.
+- **SVG 좌표**: 경계 파일을 바꾸면 `npm run map:shapes` 로 `src/features/map/mapShapes.ts` 를 다시 만듭니다.
+- **코드 규칙**: 지역은 온보딩과 같은 행정표준코드 5자리(`src/lib/regions.ts`). 서버가 대구를 구·군 코드(27110 등)로 보내도 지도에서는 대구 하나로 합칩니다.
+
+### 백엔드에 요청할 것 (지도)
+
+- `GET /api/map/regions` — 응답에 `region_code` 포함, 레시피가 0개인 지역도 포함 (색 구분·빈 지역 안내용)
+- `GET /api/map/regions/:region_code/recipes?limit=10` — `:region_code` 는 지역 이름이 아니라 코드(예: `47170`), 인기순(좋아요+저장) 정렬, 공개 발행 레시피만
+- 대구: 반영 완료(백엔드 PR #33) — `27000` = 대구 전체(군위 포함). 프론트는 `27000` 으로 한 번 요청하고, 혹시 404 면 구·군 9개로 나눠 불러 합치는 대비 코드가 남아 있음 (`src/lib/api/map.ts`)
+- 발행할 때 레시피에 `region_code` 채우기: 반영 완료(백엔드 PR #35, 프로필 지역 복사)
+- CORS: 반영 완료(백엔드 PR #35) — 서버 환경 변수 `FRONTEND_ORIGIN` 에 프론트 배포 주소를 넣어야 동작. 프론트 배포 쪽은 `VITE_API_BASE_URL` 에 서버 주소
+- 데모 시드: 여러 시·군에 공개 레시피를 넣어 빈 지도가 되지 않게 (mock 예시: `src/lib/mock/mockMap.ts`)
+

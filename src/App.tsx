@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router'
 import './App.css'
-import { isFeaturePage, pathOf, type Destination } from './app/paths'
+import { isFeaturePage, pathOf, recipePath, type Destination } from './app/paths'
 import Splash from './app/Splash'
 import { useSplash } from './app/useSplash'
-import { DEFAULT_ROLE, setupProfile } from './lib/api/profile'
+import { setupProfile } from './lib/api/profile'
 import { markProfileReady } from './lib/api/profileStatus'
 import { findRegionByCode, findRegionByText, formatRegion } from './lib/regions'
 import { useAuth } from './features/auth/auth-context'
 import LoginPage from './features/auth/LoginPage'
 import { PublicOnly, RequireAuth, RequireProfile } from './features/auth/RouteGuards'
 import SignupPage from './features/auth/SignupPage'
+import MapPage from './features/map/MapPage'
 import HomeScreen from './features/home/HomeScreen'
 import ProfileEditPage from './features/profile/ProfileEditPage'
 import ProfilePage from './features/profile/ProfilePage'
@@ -65,9 +66,8 @@ function App({ splashMs }: { splashMs?: number }) {
   async function completeOnboarding() {
     await setupProfile({
       display_name: name.trim(),
-      region_code: regionCode || null, // 지역 건너뛰면 null
+      region_code: regionCode, // 온보딩에서 지역을 골라야 여기까지 옴 (건너뛰기 없음)
       food_preferences: favoriteFoods,
-      role: DEFAULT_ROLE,
     })
     markProfileReady(session?.userId) // 이제 프로필이 있으니 홈 등에 들어갈 수 있음
     // 홈 화면이 아직 API 대신 이 값으로 이름을 보여줘서 함께 저장 (홈 API 연결 후 제거)
@@ -95,11 +95,13 @@ function App({ splashMs }: { splashMs?: number }) {
           />
           {/* 온보딩을 끝내서 서버에 프로필이 있어야 들어갈 수 있는 화면 */}
           <Route element={<RequireProfile />}>
-            <Route path="/" element={<HomeScreen name={name} onNavigate={go} />} />
+            <Route path="/" element={<HomeScreen name={name} onNavigate={go} onRecipeSelect={(recipeId) => navigate(recipePath(recipeId))} />} />
             {/* 프로필: 기존 PostOnboardingScreens 의 'profile' 화면 대신 목업 기준 새 화면 */}
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/edit" element={<ProfileEditPage />} />
             <Route path="/users/:id" element={<UserProfilePage />} />
+            {/* 지도: 기존 PostOnboardingScreens 의 'map' 임시 화면 대신 [S-07] 지역 지도 */}
+            <Route path="/map" element={<MapPage />} />
             {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
             <Route path="/:page" element={<FeatureRoute name={name} region={regionCode ? formatRegion(findRegionByCode(regionCode)) : ''} favoriteFoods={favoriteFoods} onNavigate={go} />} />
           </Route>
