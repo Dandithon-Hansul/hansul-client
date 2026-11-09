@@ -34,6 +34,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [busy, setBusy] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
   const [quotePlaying, setQuotePlaying] = useState(false)
+  const [quoteStep, setQuoteStep] = useState<'questions' | 'input' | 'confirmed' | 'skipped'>('questions')
+  const [transmitterQuote, setTransmitterQuote] = useState('')
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const mediaStream = useRef<MediaStream | null>(null)
   const chatMediaRecorder = useRef<MediaRecorder | null>(null)
@@ -124,6 +126,14 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }
   }
 
+  function beginQuoteStep() {
+    setQuoteStep('input')
+    setMessages((current) => [...current, {
+      from: 'ai',
+      text: '마지막으로 이 음식을 만들 사람들에게 전하고 싶은 한마디가 있으신가요? 한마디는 선택 사항이에요.',
+    }])
+  }
+
   async function continueToChat() {
     if (!draftId) return
     setBusy(true)
@@ -131,10 +141,13 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     try {
       const result = await analyzeRecipe(draftId)
       setAnalysis(result)
+      setQuoteStep('questions')
+      setTransmitterQuote('')
       if (result.questions.length) {
         setMessages([{ from: 'ai', text: result.questions[0].question }])
       } else {
-        setMessages([{ from: 'ai', text: transcript || '이 음식 이야기를 조금 더 들려주세요.' }])
+        setMessages([])
+        beginQuoteStep()
       }
     } catch {
       setMessages([{ from: 'ai', text: '이 음식에 대해 더 자세히 이야기해 주세요.' }])
@@ -169,6 +182,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         const nextQuestion = nextAnalysis.questions[0]?.question
         if (nextQuestion && !answerText.includes(nextQuestion)) {
           setMessages((current) => [...current, { from: 'ai', text: nextQuestion }])
+        } else if (!nextAnalysis.questions.length) {
+          beginQuoteStep()
         }
       }
       setChatImagePath(undefined)
@@ -222,13 +237,18 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   async function analyzeAndPublish() {
     setBusy(true); setScreenError('')
     try {
-      const result = await analyzeRecipe(draftId || 'draft-mock')
-      setAnalysis(result)
-      if (result.questions.length) {
-        setMessages((current) => [...current, { from: 'ai', text: result.questions.map((item) => item.question).join('\n') }])
+      if (quoteStep === 'questions') {
+        const result = await analyzeRecipe(draftId || 'draft-mock')
+        setAnalysis(result)
+        if (result.questions.length) {
+          setMessages((current) => [...current, { from: 'ai', text: result.questions[0].question }])
+        } else {
+          beginQuoteStep()
+        }
         return
       }
-      const published = await createRecipe(draftId || 'draft-mock')
+      if (quoteStep === 'input') return
+      const published = await createRecipe(draftId || 'draft-mock', quoteStep === 'confirmed' ? transmitterQuote : undefined)
       setDraftId(published.recipe_id)
       navigate(`/recipe?id=${encodeURIComponent(published.recipe_id)}`)
     } catch { setScreenError('레시피 분석 또는 발행에 실패했어요.') }
@@ -238,7 +258,13 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   function sendMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!draft.trim() || busy) return
-    void sendChatMessage(draft.trim())
+    if (quoteStep === 'input') {
+      setTransmitterQuote(draft.trim())
+      setQuoteStep('confirmed')
+      setDraft('')
+      return
+    }
+    if (quoteStep === 'questions') void sendChatMessage(draft.trim())
   }
 
   if (page === 'record') return (
@@ -269,9 +295,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={`${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
       </div>
       {screenError && <p role="alert">{screenError}</p>}
-      <div className="answer-options" aria-label="추천 답변">{(analysis?.questions[0]?.options ?? []).map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}</div>
-      <form className="chat-compose" onSubmit={sendMessage}><button className={`chat-mic ${chatVoiceRecording ? 'is-recording' : ''}`} type="button" aria-label={chatVoiceRecording ? '음성 입력 마치기' : '음성 입력'} onClick={() => void toggleChatVoice()} disabled={busy}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="메시지를 입력해 주세요" aria-label="메시지" /><button className="chat-send" type="submit" aria-label="전송" disabled={busy || !draft.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></svg></button></form>
-      <button className="feature-primary chat-next" type="button" disabled={busy || !draftId} onClick={() => void analyzeAndPublish()}>{busy ? '정리하고 있어요…' : '레시피 만들러 가기 →'}</button>
+      {quoteStep === 'questions' && <div className="answer-options" aria-label="추천 답변">{(analysis?.questions[0]?.options ?? []).map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}</div>}
+      {(quoteStep === 'questions' || quoteStep === 'input') && <form className="chat-compose" onSubmit={sendMessage}><button className={`chat-mic ${chatVoiceRecording ? 'is-recording' : ''}`} type="button" aria-label={chatVoiceRecording ? '음성 입력 마치기' : '음성 입력'} onClick={() => void toggleChatVoice()} disabled={busy}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={quoteStep === 'input' ? '전하고 싶은 한마디 (선택)' : '메시지를 입력해 주세요'} aria-label={quoteStep === 'input' ? '전승자 한마디' : '메시지'} /><button className="chat-send" type="submit" aria-label={quoteStep === 'input' ? '한마디 확정' : '전송'} disabled={busy || !draft.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></svg></button></form>}
+      {quoteStep === 'confirmed' && <div className="quote-review"><p>확정한 한마디: “{transmitterQuote}”</p><button type="button" disabled={busy} onClick={() => { setDraft(transmitterQuote); setQuoteStep('input') }}>한마디 수정</button></div>}
+      {quoteStep === 'skipped' && <p className="quote-review">한마디 없이 레시피를 발행할게요.</p>}
+      {quoteStep === 'input' && <button className="quote-skip" type="button" disabled={busy || chatVoiceRecording} onClick={() => { setDraft(''); setTransmitterQuote(''); setQuoteStep('skipped') }}>한마디 건너뛰기</button>}
+      <button className="feature-primary chat-next" type="button" disabled={busy || !draftId || quoteStep === 'input'} onClick={() => void analyzeAndPublish()}>{busy ? '정리하고 있어요…' : quoteStep === 'questions' ? '레시피 만들러 가기 →' : quoteStep === 'input' ? '한마디를 입력하거나 건너뛰어 주세요' : '레시피 발행하기 →'}</button>
       {analysis && <p className="feature-muted">재료 {analysis.structured.ingredients.length}개 · 조리 단계 {analysis.structured.steps.length}개를 분석했어요.</p>}
       <button type="button" disabled={busy} onClick={() => { setBusy(true); void vectorizeSensoryProfile().then(() => setScreenError('손맛 프로파일을 업데이트했어요.')).catch(() => setScreenError('감각 기록이 더 쌓인 뒤 다시 시도해주세요.')).finally(() => setBusy(false)) }}>손맛 프로파일 업데이트</button>
     </main>

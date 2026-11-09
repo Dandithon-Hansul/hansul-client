@@ -210,20 +210,26 @@ export async function toggleRecipe(id: string, action: "like" | "save") {
     save_count: number;
   }>(`/api/recipes/${encodeURIComponent(id)}/${action}`, { method: "POST" });
 }
-export async function createRecipe(recipeId: string) {
+export type PublishedRecipe = {
+  recipe_id: string;
+  status: "published";
+  context_summary: string;
+  transmitter_quote: string | null;
+  voice_message_url: string | null;
+};
+
+export async function createRecipe(recipeId: string, transmitterQuote?: string): Promise<PublishedRecipe> {
+  const quote = transmitterQuote?.trim();
+  const body = { recipe_id: recipeId, ...(quote ? { transmitter_quote: quote } : {}) };
   return IS_MOCK
     ? {
         recipe_id: recipeId,
         status: "published",
         context_summary: "",
+        transmitter_quote: quote || null,
         voice_message_url: null,
       }
-    : apiFetch<{
-        recipe_id: string;
-        status: string;
-        context_summary: string;
-        voice_message_url: string | null;
-      }>("/api/recipes", { method: "POST", json: { recipe_id: recipeId } });
+    : apiFetch<PublishedRecipe>("/api/recipes", { method: "POST", json: body });
 }
 export async function generateStepImages(recipeId: string) {
   return IS_MOCK
