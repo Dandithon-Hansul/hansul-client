@@ -59,7 +59,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   useEffect(() => {
     if (page !== 'cook' || !recipe || recipe.recipe_id !== recipeId) return
-    const hasMissingStepImage = recipe.steps.slice(0, -1).some((step) => !step.image_url)
+    const hasMissingStepImage = recipe.steps.some((step) => !step.image_url)
     if (!hasMissingStepImage || imageGenerationRequested.current.has(recipe.recipe_id)) return
     imageGenerationRequested.current.add(recipe.recipe_id)
     void generateStepImages(recipe.recipe_id).then((result) => {
