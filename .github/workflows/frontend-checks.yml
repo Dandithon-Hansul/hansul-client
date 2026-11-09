@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - develop
-  push:
-    branches:
-      - feature/recipe-flow-api-alignment-20261109
 
 jobs:
   verify:
