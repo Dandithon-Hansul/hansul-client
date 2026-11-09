@@ -1,0 +1,44 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import RecipePhoto from './RecipePhoto'
+
+describe('레시피 사진', () => {
+  it('실제 레시피 사진 URL이 있으면 해당 사진을 표시한다', () => {
+    render(<RecipePhoto src="https://cdn.example.com/pohang-buchujeon.png" title="포항 부추전" />)
+    expect(screen.getByRole('img', { name: '포항 부추전' })).toHaveAttribute('src', 'https://cdn.example.com/pohang-buchujeon.png')
+  })
+  it('사진이 없으면 다른 음식의 하드코딩 이미지를 쓰지 않는다', () => {
+    render(<RecipePhoto src={null} title="포항 부추전" />)
+    expect(screen.getByRole('img', { name: '포항 부추전 사진 준비 중' })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: '안동찜닭' })).not.toBeInTheDocument()
+  })
+  it('백엔드 내부 스토리지 경로를 그대로 이미지 URL로 쓰지 않는다', () => {
+    render(<RecipePhoto src="owner/recipe/photo.webp" title="육개장" />)
+    expect(screen.getByRole('img', { name: '육개장 사진 준비 중' })).toBeInTheDocument()
+  })
+  it('안동찜닭 사진이 없으면 기존 앱에 있던 안동찜닭 이미지를 복구한다', () => {
+    render(<RecipePhoto src={null} title="안동 찜닭" />)
+    expect(screen.getByRole('img', { name: '안동 찜닭' }))
+      .toHaveAttribute('src', '/images/andong-jjimdak.png')
+  })
+  it('안동찜닭 단계별 원본 이미지는 우선하고 URL 오류 시 기존 사진으로 복구한다', () => {
+    render(<RecipePhoto src="https://cdn.example.com/andong-step-1.png" title="안동찜닭 1단계" />)
+    const image = screen.getByRole('img', { name: '안동찜닭 1단계' })
+    expect(image).toHaveAttribute('src', 'https://cdn.example.com/andong-step-1.png')
+    fireEvent.error(image)
+    expect(screen.getByRole('img', { name: '안동찜닭 1단계' }))
+      .toHaveAttribute('src', '/images/andong-jjimdak.png')
+  })
+  it('기존 안동 이미지까지 로드 실패하면 무한 재시도 없이 플레이스홀더로 대체한다', () => {
+    render(<RecipePhoto src={null} title="안동찜닭" />)
+    fireEvent.error(screen.getByRole('img', { name: '안동찜닭' }))
+    expect(screen.getByRole('img', { name: '안동찜닭 사진 준비 중' })).toBeInTheDocument()
+  })
+
+  it('안동찜닭 조리 단계 이름만 보이더라도 요리명을 기준으로 대체 사진을 복구한다', () => {
+    render(<RecipePhoto src={null} title="재료 손질하기" recipeTitle="안동 찜닭" />)
+    expect(screen.getByRole('img', { name: '재료 손질하기' }))
+      .toHaveAttribute('src', '/images/andong-jjimdak.png')
+  })
+
+})
