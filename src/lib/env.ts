@@ -15,3 +15,6 @@ export const API_BASE_URL = (env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 
 /** 테스트에서는 mock 지연 없이 바로 응답 */
 export const MOCK_DELAY_MS = env.MODE === 'test' ? 0 : 300
+
+/** 카카오맵 JavaScript 키. 비우면 키 없이 동작하는 SVG 지도를 씀 */
+export const KAKAO_MAP_KEY = env.VITE_KAKAO_MAP_KEY ?? ''

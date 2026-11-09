@@ -11,6 +11,7 @@ import { useAuth } from './features/auth/auth-context'
 import LoginPage from './features/auth/LoginPage'
 import { PublicOnly, RequireAuth, RequireProfile } from './features/auth/RouteGuards'
 import SignupPage from './features/auth/SignupPage'
+import MapPage from './features/map/MapPage'
 import HomeScreen from './features/home/HomeScreen'
 import ProfileEditPage from './features/profile/ProfileEditPage'
 import ProfilePage from './features/profile/ProfilePage'
@@ -100,6 +101,8 @@ function App({ splashMs }: { splashMs?: number }) {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/edit" element={<ProfileEditPage />} />
             <Route path="/users/:id" element={<UserProfilePage />} />
+            {/* 지도: 기존 PostOnboardingScreens 의 'map' 임시 화면 대신 [S-07] 지역 지도 */}
+            <Route path="/map" element={<MapPage />} />
             {/* :page 하나로 받아야 record → chat 이동 때 대화 state 가 기존처럼 유지됨 */}
             <Route path="/:page" element={<FeatureRoute name={name} region={regionCode ? formatRegion(findRegionByCode(regionCode)) : ''} favoriteFoods={favoriteFoods} onNavigate={go} />} />
           </Route>

@@ -23,7 +23,6 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [messages, setMessages] = useState<Array<{ from: 'ai' | 'user'; text: string }>>([
     { from: 'ai', text: '오늘은 어떤 음식의 이야기를 남겨볼까요?' },
   ])
-  const [mapRegion, setMapRegion] = useState('대구광역시')
   const [cookStep, setCookStep] = useState(0)
   const [searchParams] = useSearchParams()
   const [draftId, setDraftId] = useState('')
@@ -349,10 +348,6 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   if (page === 'monthly') return (
     <main className="feature-page"><PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} />{screenError && <p role="alert">{screenError}</p>}<div className="food-list">{monthlyRecipes.map((item, index) => <button className="food-list-card" type="button" key={item.recipe_id} onClick={() => navigate(`/recipe?id=${encodeURIComponent(item.recipe_id)}`)}><img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" /><span><b>{String(index + 1).padStart(2, '0')} {item.title}</b><small>{item.region} · {item.transmitter_name} 전승자</small></span><span>›</span></button>)}</div></main>
-  )
-
-  if (page === 'map') return (
-    <main className="feature-page"><PageHeader title="지역의 맛 지도" onBack={() => onNavigate('home')} /><div className="map-intro"><p className="feature-kicker">전승 음식 지도</p><h2>우리 동네의 맛을<br />찾아보세요</h2></div><div className="region-switch">{['대구광역시', '경상북도'].map((item) => <button className={mapRegion === item ? 'selected' : ''} type="button" key={item} onClick={() => setMapRegion(item)}>{item}</button>)}</div><div className="map-illustration"><div className="map-region">{mapRegion}<span>전승 음식</span><b>안동 찜닭</b><small>대구식 육개장</small></div></div><button className="feature-primary" type="button" onClick={() => onNavigate('monthly')}>{mapRegion} 인기 레시피 보기 <span>→</span></button></main>
   )
 
   return (
