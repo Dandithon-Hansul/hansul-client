@@ -51,7 +51,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }
     if (page === 'monthly') {
       let active = true
-      getRecipes().then((data) => { if (active) setMonthlyRecipes(data.recipes) }).catch(() => { if (active) setScreenError('레시피 목록을 불러오지 못했어요.') })
+      getRecipes('', 6, undefined, 'popular').then((data) => { if (active) setMonthlyRecipes(data.recipes.slice(0, 6)) }).catch(() => { if (active) setScreenError('레시피 목록을 불러오지 못했어요.') })
       return () => { active = false }
     }
     return undefined

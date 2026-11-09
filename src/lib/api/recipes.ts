@@ -293,7 +293,6 @@ export async function uploadSignedFile(
   file: File,
   purpose:
     | "stt_audio"
-    | "card_voice"
     | "chat_image",
   recipeId?: string,
 ) {
