@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
 import { useAuth } from '../auth/auth-context'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
+import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
 import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
 import { failedStepImageOrders, mergeStepImages } from './stepImageGeneration'
 import './post-onboarding.css'
@@ -35,7 +36,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [transcript, setTranscript] = useState('')
   const [recordError, setRecordError] = useState('')
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
-  const [monthlyRecipes, setMonthlyRecipes] = useState<RecipeListItem[]>([])
+  const [monthlyRecipes, setMonthlyRecipes] = useState<HomeRecipe[]>([])
+  const [monthlyLoading, setMonthlyLoading] = useState(false)
   const [screenError, setScreenError] = useState('')
   const [stepImageStatus, setStepImageStatus] = useState<{
     recipeId: string
@@ -70,7 +72,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }
     if (page === 'monthly') {
       let active = true
-      getRecipes('', 6, undefined, 'popular').then((data) => { if (active) setMonthlyRecipes(data.recipes.slice(0, 6)) }).catch(() => { if (active) setScreenError('레시피 목록을 불러오지 못했어요.') })
+      setMonthlyLoading(true)
+      setScreenError('')
+      getMonthlyTopRecipes()
+        .then((recipes) => { if (active) setMonthlyRecipes(recipes) })
+        .catch(() => { if (active) { setMonthlyRecipes([]); setScreenError('이달의 전승 음식 순위를 불러오지 못했어요.') } })
+        .finally(() => { if (active) setMonthlyLoading(false) })
       return () => { active = false }
     }
     return undefined
@@ -496,7 +503,22 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   }
 
   if (page === 'monthly') return (
-    <main className="feature-page"><PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} />{screenError && <p role="alert">{screenError}</p>}<div className="food-list">{monthlyRecipes.map((item, index) => <button className="food-list-card" type="button" key={item.recipe_id} onClick={() => navigate(`/recipe?id=${encodeURIComponent(item.recipe_id)}`)}><img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" /><span><b>{String(index + 1).padStart(2, '0')} {item.title}</b><small>{item.region} · {item.transmitter_name} 전승자</small></span><span>›</span></button>)}</div></main>
+    <main className="feature-page">
+      <PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} />
+      <div className="food-list">
+        <p className="feature-muted">이번 달 좋아요·저장 활동을 기준으로 선정했어요.</p>
+        {monthlyLoading && <p role="status">이달의 순위를 불러오는 중…</p>}
+        {screenError && <p role="alert">{screenError}</p>}
+        {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p>아직 이번 달에 소개할 전승 음식이 없어요.</p>}
+        {monthlyRecipes.map((item, index) => (
+          <button className="food-list-card" type="button" key={item.recipe_id} onClick={() => navigate(recipePath(item.recipe_id))}>
+            <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
+            <span><b>{String(item.rank ?? index + 1).padStart(2, '0')} {item.title || '이름 없는 레시피'}</b></span>
+            <span aria-hidden="true">›</span>
+          </button>
+        ))}
+      </div>
+    </main>
   )
 
   return (
