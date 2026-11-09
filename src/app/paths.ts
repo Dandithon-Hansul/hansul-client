@@ -20,3 +20,8 @@ export function pathOf(destination: Destination): string {
 export function recipePath(recipeId: string): string {
   return `/recipe?id=${encodeURIComponent(recipeId)}`
 }
+
+/** 단계별 조리 주소 — 상세에서 고른 레시피 id 를 그대로 넘김 (없으면 예시 레시피를 불러와 실제 서버에서 400) */
+export function cookPath(recipeId: string): string {
+  return `/cook?id=${encodeURIComponent(recipeId)}`
+}

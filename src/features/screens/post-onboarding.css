@@ -59,6 +59,11 @@
   .chat-image-upload { @apply cursor-pointer text-lg text-[#817b71]; }
   .chat-next { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+78px)] left-1/2 w-auto -translate-x-1/2 justify-center border-0 bg-transparent px-2 py-1 text-[12px] font-normal text-[#aaa398] underline underline-offset-2; min-height: 30px; }
   .chat-next span { @apply hidden; }
+  .quote-review { @apply mb-[100px] rounded-md bg-[#e9e5dc] px-4 py-3 text-[12px] leading-relaxed text-[#514e48]; }
+  .quote-review p { @apply my-1; }
+  .quote-review button { @apply mt-2 cursor-pointer border-0 bg-transparent p-0 text-[12px] underline underline-offset-2; }
+  .quote-skip { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+136px)] left-1/2 -translate-x-1/2 cursor-pointer border-0 bg-transparent p-2 text-[12px] text-[#605c55] underline underline-offset-2; }
+  .chat-audio-retry { @apply shrink-0 cursor-pointer rounded-md border border-[#50604b] bg-white px-3 py-2 text-[12px] text-[#50604b]; }
   .recipe-page { @apply px-0 pt-0; }
   .recipe-hero { @apply relative h-[342px] w-full overflow-hidden; }
   .recipe-detail-image { @apply absolute inset-0 block h-full w-full object-cover; }
@@ -102,6 +107,12 @@
   .cook-segments span.is-current { @apply bg-[#b9472f]; }
   .cook-step-title { @apply mb-4 mt-0 font-serif text-[16px] font-medium text-[#272621]; }
   .cook-image { @apply h-[186px] w-full rounded-[6px] object-cover; }
+  .cook-image-progress { @apply mb-3 text-[12px] text-[#79756d]; }
+  .cook-image-failure { @apply mb-4 rounded-[6px] border border-[#e8c9bd] bg-[#fff4ef] px-3 py-3 text-[12px] leading-[1.6] text-[#914936]; }
+  .cook-image-failure p { @apply m-0; }
+  .cook-image-failure button { @apply mt-2 cursor-pointer rounded-[4px] border border-[#b9472f] bg-white px-3 py-2 text-[12px] font-semibold text-[#b9472f]; }
+  .cook-image-failure button:disabled { @apply cursor-not-allowed opacity-60; }
+  .cook-image-fallback-note { @apply mt-2 text-[11px] text-[#817b71]; }
   .cook-description { @apply mb-0 mt-5 min-h-[68px] text-[12px] leading-[1.7] text-[#5f5a52]; }
   .cook-ai-tip { @apply mt-7 flex min-h-[50px] items-center gap-3 rounded-[5px] bg-[#f2eee5] px-4 py-3 text-[11px] leading-[1.5] text-[#827a6d]; }
   .cook-ai-tip span { @apply text-[#5e5b54]; }
