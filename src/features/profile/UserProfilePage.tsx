@@ -45,7 +45,8 @@ function UserProfilePage() {
   if (session?.userId === id) return <Navigate to="/profile" replace />
 
   const error = current?.error
-  const notFound = error instanceof ApiError && error.status === 404
+  // 400(ID 형식 오류)·404 는 다시 불러와도 같은 결과라 '찾을 수 없어요' 로 안내하고 다시 시도 버튼은 숨김
+  const notFound = error instanceof ApiError && (error.status === 404 || error.status === 400)
   const region = profile ? (profile.region ? formatRegion(profile.region) : profile.region_text ?? '지역 미설정') : ''
 
   return (
@@ -55,7 +56,7 @@ function UserProfilePage() {
         <button type="button" className="profile-back" onClick={goBack} aria-label="뒤로">‹</button>
       </header>
 
-      <section className="profile-head">
+      {!error && <section className="profile-head">
         {!profile ? (
           <>
             <span className="avatar is-skeleton" style={{ width: 56, height: 56 }} />
@@ -70,7 +71,7 @@ function UserProfilePage() {
             </div>
           </>
         )}
-      </section>
+      </section>}
       {profile?.bio && <p className="profile-bio">{profile.bio}</p>}
 
       {error ? (
