@@ -35,7 +35,6 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [cookStep, setCookStep] = useState(0)
   const [searchParams] = useSearchParams()
   const [draftId, setDraftId] = useState('')
-  const [transcript, setTranscript] = useState('')
   const [recordError, setRecordError] = useState('')
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null)
   const [monthlyRecipes, setMonthlyRecipes] = useState<HomeRecipe[]>([])
@@ -206,13 +205,14 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             const file = createRecordingFile(chunks, recorder.mimeType, 'recording')
             const signed = await uploadSignedFile(file, 'stt_audio')
             const result = await transcribe({ audio_path: sttAudioPath(signed) })
-            setTranscript(result.transcript)
             setDraftId(result.recipe_id)
             if (recordPhoto) {
               const photo = await uploadSignedFile(recordPhoto, 'chat_image', result.recipe_id)
               setChatImagePath(photo.path)
               setRecordPhoto(null)
             }
+            // The transcript stays on the server as a draft; continue to the conversation automatically.
+            await continueToChat(result.recipe_id)
           } catch (error) {
             setRecordError(error instanceof ApiError && error.status === 415
               ? '지원하지 않는 오디오 형식이에요. 다른 브라우저에서 다시 녹음해 주세요.'
@@ -230,6 +230,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   function finishRecording() {
     const recorder = mediaRecorder.current
     if (recorder && recorder.state !== 'inactive') {
+      setBusy(true)
       recorder.stop()
       setRecording(false)
     }
@@ -243,12 +244,13 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     }])
   }
 
-  async function continueToChat() {
-    if (!draftId) return
+  async function continueToChat(completedDraftId?: string) {
+    const currentDraftId = completedDraftId || draftId
+    if (!currentDraftId) return
     setBusy(true)
     setScreenError('')
     try {
-      const result = await analyzeRecipe(draftId)
+      const result = await analyzeRecipe(currentDraftId)
       setAnalysis(result)
       setQuoteStep('questions')
       setTransmitterQuote('')
@@ -471,8 +473,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         {recordError && <p role="alert">{recordError}</p>}
         <div className="record-guidance"><small>이렇게 시작해 보세요</small><p>“오늘은 우리 집에서 40년 동안 만들어 온<br />소고기국 레시피를 알려줄게요.”</p></div>
         <label className={`photo-upload record-photo-button ${recordPhoto ? 'is-active' : ''}`}>{recordPhoto ? '사진이 추가됐어요' : '음식 사진 먼저 추가하기'}<input type="file" accept="image/*" onChange={(event) => setRecordPhoto(event.target.files?.[0] ?? null)} /></label>
-        {transcript && <div className="record-transcript" aria-live="polite"><span>음성 전사</span><p>{transcript}</p></div>}
-        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else void continueToChat() }}>기록 마무리 하기</button>
+        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else void continueToChat() }}>{busy ? '레시피 이야기를 정리하고 있어요…' : '기록 마무리 하기'}</button>
       </div>
     </main>
   )
