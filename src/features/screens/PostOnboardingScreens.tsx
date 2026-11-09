@@ -5,6 +5,7 @@ import { IS_MOCK } from '../../lib/env'
 import RecipePhoto from '../../components/RecipePhoto'
 import { createRecordingFile } from '../../lib/recordingFile'
 import { ApiError } from '../../lib/api/client'
+import { flowErrorMessage } from './recipeFlowError'
 import { useAuth } from '../auth/auth-context'
 import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
 import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
@@ -274,9 +275,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         setMessages([])
         beginQuoteStep()
       }
-    } catch {
-      setMessages([{ from: 'ai', text: '이 음식에 대해 더 자세히 이야기해 주세요.' }])
-      setScreenError('질문을 불러오지 못했어요. 메시지를 보내면 대화를 이어갈 수 있어요.')
+    } catch (error) {
+      setMessages([{ from: 'ai', text: '들려주신 음식 이야기를 조금 더 정리해 볼게요.' }])
+      setScreenError(flowErrorMessage(error, 'analysis'))
     } finally {
       setBusy(false)
       onNavigate('chat')
@@ -445,10 +446,19 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   }
 
   async function analyzeAndPublish() {
-    setBusy(true); setScreenError('')
+    if (busy) return
+    setScreenError('')
+    // Avoid repeatedly charging/retrying the analysis API while there are
+    // still explicit questions the user has not answered.
+    if (quoteStep === 'questions' && analysis?.questions.length) {
+      setScreenError('아직 확인할 손맛 질문이 있어요. 답변을 고르거나 직접 이야기해 주세요.')
+      return
+    }
+    if (quoteStep === 'input') return
+    setBusy(true)
     try {
       if (quoteStep === 'questions') {
-        const result = await analyzeRecipe(draftId || 'draft-mock')
+        const result = analysis ?? await analyzeRecipe(draftId || 'draft-mock')
         setAnalysis(result)
         if (result.questions.length) {
           setMessages((current) => [...current, { from: 'ai', text: result.questions[0].question }])
@@ -457,12 +467,14 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         }
         return
       }
-      if (quoteStep === 'input') return
       const published = await createRecipe(draftId || 'draft-mock', quoteStep === 'confirmed' ? transmitterQuote : undefined)
       setDraftId(published.recipe_id)
       navigate(`/recipe?id=${encodeURIComponent(published.recipe_id)}`)
-    } catch { setScreenError('레시피 분석 또는 발행에 실패했어요.') }
-    finally { setBusy(false) }
+    } catch (error) {
+      setScreenError(flowErrorMessage(error, quoteStep === 'questions' ? 'analysis' : 'publish'))
+    } finally {
+      setBusy(false)
+    }
   }
 
   function sendMessage(event: FormEvent<HTMLFormElement>) {
