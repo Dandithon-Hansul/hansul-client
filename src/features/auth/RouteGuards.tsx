@@ -4,6 +4,7 @@ import { ApiError } from '../../lib/api/client'
 import { getMyProfile } from '../../lib/api/profile'
 import { isProfileConfirmed, markProfileReady } from '../../lib/api/profileStatus'
 import { useAuth } from './auth-context'
+import './auth.css'
 
 type FromState = { from?: string } | null
 
@@ -12,6 +13,26 @@ function readFrom(state: unknown): string | null {
   const from = (state as FromState)?.from
   if (!from || !from.startsWith('/') || from.startsWith('//') || from.startsWith('/login') || from.startsWith('/signup')) return null
   return from
+}
+
+/**
+ * 프로필 확인(GET /api/profiles/me)이 404 가 아닌 이유로 실패했을 때 보여주는 화면.
+ * 예전엔 백엔드가 없어도 써 볼 수 있게 조용히 홈으로 보냈는데, 그러면 가입 직후 온보딩을 건너뛰고
+ * 원인(서버 주소·CORS·토큰 문제)도 안 보여서 이유를 화면에 띄우고 다시 시도하게 함
+ */
+function ProfileCheckError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  const { signOut } = useAuth()
+  const message = error instanceof ApiError ? error.message : '프로필을 확인하지 못했어요.'
+  const code = error instanceof ApiError ? (error.status ? `${error.code} · ${error.status}` : error.code) : null
+  return (
+    <div className="profile-check-error" role="alertdialog" aria-labelledby="profile-check-error-title">
+      <h2 id="profile-check-error-title">내 정보를 불러오지 못했어요</h2>
+      <p>{message}</p>
+      {code && <small>{code}</small>}
+      <button type="button" className="auth-submit" onClick={onRetry}>다시 시도</button>
+      <button type="button" className="profile-check-logout" onClick={() => void signOut()}>로그아웃</button>
+    </div>
+  )
 }
 
 /**
@@ -36,7 +57,8 @@ export function RequireAuth() {
 export function RequireProfile() {
   const { session } = useAuth()
   const userId = session?.userId
-  const [state, setState] = useState<'checking' | 'ready' | 'missing'>(() => (isProfileConfirmed(userId) ? 'ready' : 'checking'))
+  const [state, setState] = useState<'checking' | 'ready' | 'missing' | 'error'>(() => (isProfileConfirmed(userId) ? 'ready' : 'checking'))
+  const [error, setError] = useState<unknown>(null)
 
   useEffect(() => {
     if (state !== 'checking') return
@@ -46,10 +68,12 @@ export function RequireProfile() {
         markProfileReady(userId)
         if (alive) setState('ready')
       })
-      .catch((error: unknown) => {
+      .catch((caught: unknown) => {
         if (!alive) return
-        // 404 만 온보딩으로. 백엔드 미연결 등 다른 에러로 앱을 막지는 않음
-        setState(error instanceof ApiError && error.status === 404 ? 'missing' : 'ready')
+        // 404 → 온보딩. 그 밖의 에러는 홈으로 넘기지 않고 이유를 보여줌
+        if (caught instanceof ApiError && caught.status === 404) return setState('missing')
+        setError(caught)
+        setState('error')
       })
     return () => {
       alive = false
@@ -58,6 +82,7 @@ export function RequireProfile() {
 
   if (state === 'checking') return null
   if (state === 'missing') return <Navigate to="/onboarding" replace />
+  if (state === 'error') return <ProfileCheckError error={error} onRetry={() => setState('checking')} />
   return <Outlet />
 }
 
@@ -65,13 +90,15 @@ export function RequireProfile() {
  * 로그인 상태가 되는 순간 어디로 갈지 정함 (API 명세: 프로필 없으면 404 PROFILE_NOT_FOUND)
  * - 프로필 있음 → 원래 가려던 곳 또는 홈
  * - 404 → 온보딩
- * - 백엔드 미연결 등 그 밖의 에러 → 로그인은 막지 않고 홈
+ * - 그 밖의 에러(서버 연결·주소·토큰 문제) → 홈으로 넘기지 않고 이유와 다시 시도 버튼 (가입 직후 온보딩을 건너뛰지 않게)
  */
 function ResolveLanding() {
   const navigate = useNavigate()
   const location = useLocation()
   const { session } = useAuth()
   const userId = session?.userId
+  const [error, setError] = useState<unknown>(null)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -81,17 +108,26 @@ function ResolveLanding() {
         markProfileReady(userId)
         if (alive) navigate(target, { replace: true })
       })
-      .catch((error: unknown) => {
+      .catch((caught: unknown) => {
         if (!alive) return
-        if (error instanceof ApiError && error.status === 404) navigate('/onboarding', { replace: true })
-        else navigate(target, { replace: true })
+        if (caught instanceof ApiError && caught.status === 404) navigate('/onboarding', { replace: true })
+        else setError(caught)
       })
     return () => {
       alive = false
     }
-  }, [navigate, location.state, userId])
+  }, [navigate, location.state, userId, attempt])
 
-  return null
+  if (!error) return null
+  return (
+    <ProfileCheckError
+      error={error}
+      onRetry={() => {
+        setError(null)
+        setAttempt((count) => count + 1)
+      }}
+    />
+  )
 }
 
 /** 로그인·회원가입 화면 전용. 이미 로그인했으면 화면은 그대로 두고 갈 곳을 정해서 이동 */

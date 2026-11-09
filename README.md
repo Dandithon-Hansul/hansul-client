@@ -117,7 +117,7 @@ npm run dev -- --host 0.0.0.0
 
 **mock 모드** (`VITE_USE_MOCK=true`): 데모 계정 `hansul` / `hansul123` 은 프로필이 있어 로그인하면 홈으로, 새로 가입한 계정은 프로필이 없어 온보딩으로 갑니다. 가짜 데이터 초기화는 개발자 도구 콘솔에서 `localStorage.removeItem('hansul.mock.db')`.
 
-**실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 백엔드 `/api/profiles/me` 가 아직 없으면 로그인 후 홈으로 갑니다.
+**실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 가입·로그인 직후 `GET /api/profiles/me` 가 404 면 온보딩, 그 밖의 이유로 실패하면 '내 정보를 불러오지 못했어요' 화면에 원인 코드가 나옵니다 — `INVALID_RESPONSE · 200` 은 백엔드 주소 미설정(`VITE_API_PROXY_TARGET`/`VITE_API_BASE_URL`), `NETWORK_ERROR` 는 서버 연결·CORS, `UNAUTHORIZED · 401` 은 프론트와 백엔드의 Supabase 프로젝트가 다른 경우.
 
 ### 백엔드에 요청할 것 (프로필)
 
