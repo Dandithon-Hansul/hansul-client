@@ -200,10 +200,10 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data) }
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop())
-        const file = createRecordingFile(chunks, recorder.mimeType, 'recording')
         void (async () => {
           setBusy(true)
           try {
+            const file = createRecordingFile(chunks, recorder.mimeType, 'recording')
             const signed = await uploadSignedFile(file, 'stt_audio')
             const result = await transcribe({ audio_path: sttAudioPath(signed) })
             setTranscript(result.transcript)
@@ -371,10 +371,10 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data) }
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop())
-        const file = createRecordingFile(chunks, recorder.mimeType, 'chat-recording')
         void (async () => {
           setBusy(true)
           try {
+            const file = createRecordingFile(chunks, recorder.mimeType, 'chat-recording')
             const signed = await uploadSignedFile(file, 'stt_audio', draftId || undefined)
             const result = await transcribe({ audio_path: sttAudioPath(signed), ...(draftId ? { recipe_id: draftId } : {}) })
             if (result.transcript) setDraft(result.transcript)
