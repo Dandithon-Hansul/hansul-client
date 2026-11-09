@@ -56,6 +56,7 @@
   .profile-edit-row { @apply flex h-[58px] w-full items-center border-0 border-b border-solid border-[#ece8e0] bg-transparent px-3 text-left font-[inherit]; }
   .profile-edit-row > span { @apply w-[72px] shrink-0 text-[13px] text-[#666159]; }
   .profile-edit-row input { @apply h-full min-w-0 flex-1 border-0 bg-transparent text-base text-[#262626] outline-none; }
+  .profile-edit-row input::placeholder { @apply text-[#b5afa5]; }
   .profile-edit-row strong { @apply flex-1 text-[14px] font-normal text-[#262626]; }
   .profile-edit-row i { @apply not-italic text-lg text-[#a8a196]; }
   button.profile-edit-row { @apply cursor-pointer; }

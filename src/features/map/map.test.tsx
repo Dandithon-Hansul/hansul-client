@@ -7,7 +7,7 @@ import type { KakaoMaps } from './kakaoLoader'
 import KakaoRegionMap from './KakaoRegionMap'
 import { toMapCode } from './mapRegionCode'
 import { MAP_SHAPES } from './mapShapes'
-import { shortName } from './mapStyle'
+import { GB_FILL, SELECTED_BORDER, SELECTED_FILL, shortName } from './mapStyle'
 
 const region = (name: string) => screen.getByRole('button', { name: new RegExp(`^${name}, 레시피`) })
 const sheet = (name: string) => screen.getByRole('region', { name: `${name} 지역의 인기 레시피` })
@@ -34,6 +34,9 @@ describe('지역 지도 화면 (Figma)', () => {
     await user.click(await screen.findByRole('button', { name: '안동시, 레시피 4개' }))
     expect(currentPath()).toHaveTextContent('/map?region=47170')
     expect(region('안동시')).toHaveAttribute('aria-pressed', 'true')
+    // 디자인 요청: 빨간 핀과 함께 고른 구역 색이 바뀜 (다른 지역은 그대로)
+    expect(region('안동시').querySelector('path')).toHaveAttribute('fill', SELECTED_FILL)
+    expect(region('영주시').querySelector('path')).toHaveAttribute('fill', GB_FILL)
     expect(screen.queryByRole('navigation', { name: '하단 메뉴' })).not.toBeInTheDocument()
     const panel = sheet('안동')
     const card = await within(panel).findByRole('button', { name: /안동 찜닭/ })
@@ -187,7 +190,7 @@ describe('카카오맵 모드', () => {
     return { polygons, setBounds, overlays }
   }
 
-  it('경계 파일로 지역마다 폴리곤을 만들고, 누르면 선택·선택하면 확대 + 빨간 핀만 표시한다', async () => {
+  it('경계 파일로 지역마다 폴리곤을 만들고, 누르면 선택·선택하면 확대 + 구역 색 변경 + 빨간 핀', async () => {
     const { polygons, setBounds, overlays } = fakeKakao()
     const geo = await import('../../../public/geo/daegu-gyeongbuk.geojson?raw').then((module) => JSON.parse(module.default))
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(geo))))
@@ -207,8 +210,8 @@ describe('카카오맵 모드', () => {
 
     setBounds.mockClear()
     rerender(<KakaoRegionMap appKey="test" counts={counts} selected="47170" onSelect={onSelect} onFail={onFail} insets={INSETS} />)
-    // 테두리·색은 그대로, 핀만 지도에 올라감
-    expect(polygons[andongIndex].setOptions).not.toHaveBeenCalled()
+    // 고른 구역 색·테두리가 바뀌고 핀이 지도에 올라감
+    expect(polygons[andongIndex].setOptions).toHaveBeenLastCalledWith(expect.objectContaining({ fillColor: SELECTED_FILL, strokeColor: SELECTED_BORDER }))
     const pin = overlays.find((overlay) => overlay.content instanceof HTMLElement && overlay.content.className === 'kakao-region-pin')
     expect(pin?.setMap).toHaveBeenLastCalledWith(expect.anything())
     expect(setBounds).toHaveBeenCalledTimes(1)

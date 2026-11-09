@@ -25,9 +25,7 @@
   .food-choice.selected svg { @apply text-[#8c9888]; }
   .onboarding-bottom { @apply fixed bottom-[calc(env(safe-area-inset-bottom)+30px)] left-1/2 z-[2] w-[min(calc(100%-42px),360px)] -translate-x-1/2; }
   .onboarding-bottom button { @apply h-12 w-full cursor-pointer rounded-[3px] border border-[#45573e] bg-[#45573e] text-base text-white; }
-  .onboarding-bottom button:disabled,
-  .onboarding-bottom button.is-skip { @apply border-[#efebe4] bg-[#f8f5f0] text-[#5e5850]; }
-  .onboarding-bottom button:disabled { @apply cursor-not-allowed; }
+  .onboarding-bottom button:disabled { @apply cursor-not-allowed border-[#efebe4] bg-[#f8f5f0] text-[#5e5850]; }
   .onboarding-bottom button[aria-busy='true'] { @apply cursor-wait opacity-80; }
   .onboarding-error { @apply mb-3 text-center text-xs text-terra; }
 }

@@ -13,6 +13,8 @@ export type MyProfile = {
   display_name: string
   avatar_url: string | null
   region: Region | null
+  /** 소개 한 줄 (⚠️ 백엔드 GET /api/profiles/me 응답에 아직 없음 → 없으면 null) */
+  bio: string | null
   food_preferences: string[]
   stats: {
     transmitted_recipes: number
@@ -34,6 +36,8 @@ export type ProfileUpdateBody = {
   region_code?: string
   food_preferences?: string[]
   avatar_url?: string | null
+  /** 소개 — 비우면 null (⚠️ 백엔드 PATCH 스키마에 bio 추가 요청 중) */
+  bio?: string | null
 }
 
 /** 프로필 그리드 한 칸에 필요한 최소 정보 */
@@ -93,11 +97,11 @@ export type PublicProfile = {
 
 /**
  * POST /api/profiles/setup — 온보딩 마지막 "한술 시작하기" (명세서: 역할 선택 없음)
- * region_code: 지역을 건너뛰면 null (⚠️ 백엔드는 아직 필수 — 허용 여부 확인 중)
+ * region_code: 필수 — 지역이 없으면 발행한 레시피가 지도에 안 나와서 온보딩에서 건너뛰기를 막음 (백엔드와 합의)
  */
 export type ProfileSetupBody = {
   display_name: string
-  region_code: string | null
+  region_code: string
   food_preferences: string[]
 }
 

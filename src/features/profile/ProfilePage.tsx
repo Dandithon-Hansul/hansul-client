@@ -15,7 +15,7 @@ const TABS: Array<{ key: Tab; label: string }> = [
 
 /**
  * [S-08] 마이페이지 — 목업 기준
- * 프로필 사진·이름·지역 / 활동 통계 / 나의 레시피·저장한 맛 탭 + 3열 그리드
+ * 프로필 사진·이름·지역·소개 / 활동 통계 / 나의 레시피·저장한 맛 탭 + 3열 그리드
  */
 function ProfilePage() {
   const goBack = useGoBack('/')
@@ -48,6 +48,8 @@ function ProfilePage() {
           </>
         )}
       </section>
+      {/* 소개 — 다른 사람 프로필과 같은 자리 */}
+      {profile?.bio && <p className="profile-bio">{profile.bio}</p>}
 
       {error ? (
         <div className="profile-message">

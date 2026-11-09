@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { DAEGU_DISTRICTS, DAEGU_INNER_D, DOKDO_LABEL, INNER_D, MAINLAND_BOX, MAP_SHAPES, MAP_SIZE, OUTLINE_D, PROVINCE_LABEL, ULLEUNG_INSET, type MapShape } from './mapShapes'
-import { DAEGU_BORDER, DAEGU_CODE, fillOf, INNER_LINE, LABEL, mapLabel, OUTLINE, PIN } from './mapStyle'
+import { DAEGU_BORDER, DAEGU_CODE, fillOf, INNER_LINE, LABEL, mapLabel, OUTLINE, PIN, SELECTED_BORDER } from './mapStyle'
 import type { MapInsets, RegionMapProps } from './regionMapProps'
 
 /** 카메라: 화면 왼쪽 위에 오는 지도 좌표(x, y) + 배율 s (화면 px / 지도 단위) */
@@ -51,7 +51,7 @@ const prefersReducedMotion = () =>
 
 /**
  * Figma 스타일 지도 (카카오 키 없이 동작)
- * 연두 경북 + 살구 대구, 진한 초록 바깥 테두리, 흰 경계선 / 선택: 빨간 핀
+ * 연두 경북 + 살구 대구, 진한 초록 바깥 테두리, 흰 경계선 / 선택: 빨간 핀 + 구역 색 변경
  * 탭 → 지역 선택 / 끌기 → 이동 / 두 손가락·휠 → 확대·축소
  */
 function SvgRegionMap({ counts, selected, onSelect, insets }: RegionMapProps) {
@@ -242,7 +242,7 @@ function SvgRegionMap({ counts, selected, onSelect, insets }: RegionMapProps) {
               {isUlleung && <rect className="region-map-inset" x={ULLEUNG_INSET.x} y={ULLEUNG_INSET.y} width={ULLEUNG_INSET.width} height={ULLEUNG_INSET.height} rx={10} vectorEffect="non-scaling-stroke" />}
               <path
                 d={shape.d}
-                fill={fillOf(shape.code)}
+                fill={fillOf(shape.code, shape.code === selected)}
                 stroke={isUlleung ? OUTLINE : 'none'}
                 strokeWidth={isUlleung ? 1.6 : 0}
                 strokeLinejoin="round"
@@ -258,6 +258,7 @@ function SvgRegionMap({ counts, selected, onSelect, insets }: RegionMapProps) {
           <path d={DAEGU_INNER_D} stroke={INNER_LINE} strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
           <path d={OUTLINE_D} stroke={OUTLINE} strokeWidth={2} vectorEffect="non-scaling-stroke" />
           <path d={MAP_SHAPES.find((shape) => shape.code === DAEGU_CODE)?.d} stroke={DAEGU_BORDER} strokeWidth={1.8} vectorEffect="non-scaling-stroke" />
+          {selectedShape && <path className="region-map-selected" d={selectedShape.d} stroke={SELECTED_BORDER} strokeWidth={2} vectorEffect="non-scaling-stroke" />}
         </g>
 
         {/* 3) 이름표 */}

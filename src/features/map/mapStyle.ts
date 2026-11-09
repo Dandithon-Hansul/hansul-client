@@ -12,11 +12,13 @@ export const OUTLINE = '#24571d'
 export const DAEGU_BORDER = '#9f6044'
 /** 시·군 사이, 대구 구·군 사이 경계선 */
 export const INNER_LINE = '#ffffff'
-/** 선택한 지역 표시 — 빨간 핀만 */
+/** 선택한 지역: 빨간 핀 + 지역 색 변경 (디자인 요청: Figma 첫 화면의 대구처럼 구역 색이 바뀌게) */
 export const PIN = '#c4453b'
+export const SELECTED_FILL = '#f2a68c'
+export const SELECTED_BORDER = '#b94830'
 export const LABEL = '#2b2b2b'
 
-export const fillOf = (code: string) => (code === DAEGU_CODE ? DAEGU_FILL : GB_FILL)
+export const fillOf = (code: string, selected = false) => (selected ? SELECTED_FILL : code === DAEGU_CODE ? DAEGU_FILL : GB_FILL)
 
 /** 지도 위 이름 그대로 ('대구광역시', '안동시') */
 export function mapLabel(region: { name: string }): string {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadKakaoMaps, type KakaoLatLngBounds, type KakaoMap, type KakaoMaps, type KakaoOverlay, type KakaoPolygon } from './kakaoLoader'
-import { DAEGU_BORDER, DAEGU_CODE, fillOf, GEO_URL, INNER_LINE, mapLabel } from './mapStyle'
+import { DAEGU_BORDER, DAEGU_CODE, fillOf, GEO_URL, INNER_LINE, mapLabel, SELECTED_BORDER } from './mapStyle'
 import { MAP_SHAPES } from './mapShapes'
 import type { RegionMapProps } from './regionMapProps'
 
@@ -96,10 +96,22 @@ function KakaoRegionMap({ selected, onSelect, appKey, onFail, insets }: Props) {
     }
   }, [appKey])
 
-  // 2) 선택한 지역으로 확대 + 빨간 핀 — 시트·메뉴에 가리지 않게 위아래 여백
+  // 2) 선택한 지역 색 변경 + 확대 + 빨간 핀 — 시트·메뉴에 가리지 않게 위아래 여백
   const { top, bottom } = insets
   useEffect(() => {
     if (!ready) return
+    for (const [code, region] of ready.regions) {
+      const isSelected = code === selected
+      const isDaegu = code === DAEGU_CODE
+      for (const polygon of region.polygons) {
+        polygon.setOptions({
+          fillColor: fillOf(code, isSelected),
+          strokeColor: isSelected ? SELECTED_BORDER : isDaegu ? DAEGU_BORDER : INNER_LINE,
+          strokeWeight: isSelected || isDaegu ? 2 : 1,
+          zIndex: isSelected ? 3 : isDaegu ? 2 : 1,
+        })
+      }
+    }
     const region = selected ? ready.regions.get(selected) : undefined
     const info = MAP_SHAPES.find((shape) => shape.code === selected)
     if (region && info) {

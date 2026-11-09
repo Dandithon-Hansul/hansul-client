@@ -66,7 +66,7 @@ function App({ splashMs }: { splashMs?: number }) {
   async function completeOnboarding() {
     await setupProfile({
       display_name: name.trim(),
-      region_code: regionCode || null, // 지역 건너뛰면 null
+      region_code: regionCode, // 온보딩에서 지역을 골라야 여기까지 옴 (건너뛰기 없음)
       food_preferences: favoriteFoods,
     })
     markProfileReady(session?.userId) // 이제 프로필이 있으니 홈 등에 들어갈 수 있음
