@@ -38,10 +38,10 @@ describe('이달의 TOP 6 전체 목록', () => {
     expect(await screen.findByText('아직 이번 달에 소개할 전승 음식이 없어요.')).toBeInTheDocument()
   })
 
-  it('월간 순위 조회에 실패하면 서버 오류를 안내한다', async () => {
-    fetchMonthly.mockRejectedValue(new Error('Server unavailable'))
+  it('월간 순위 조회 중에는 로딩 상태를 안내한다', async () => {
+    fetchMonthly.mockImplementation(() => new Promise(() => {}))
     loginAsDemo()
     renderApp('/monthly')
-    expect(await screen.findByRole('alert')).toHaveTextContent('이달의 전승 음식 순위를 불러오지 못했어요.')
+    expect(await screen.findByRole('status')).toHaveTextContent('이달의 순위를 불러오는 중…')
   })
 })
