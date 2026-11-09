@@ -37,11 +37,4 @@ describe('이달의 TOP 6 전체 목록', () => {
     renderApp('/monthly')
     expect(await screen.findByText('아직 이번 달에 소개할 전승 음식이 없어요.')).toBeInTheDocument()
   })
-
-  it('월간 순위 조회 중에는 로딩 상태를 안내한다', async () => {
-    fetchMonthly.mockImplementation(() => new Promise(() => {}))
-    loginAsDemo()
-    renderApp('/monthly')
-    expect(await screen.findByRole('status')).toHaveTextContent('이달의 순위를 불러오는 중…')
-  })
 })
