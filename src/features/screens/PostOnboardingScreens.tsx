@@ -607,31 +607,56 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     )
   }
 
+
   if (page === 'monthly') return (
-    <main className="feature-page">
-      <PageHeader title="이달의 전승 음식 TOP 6" onBack={() => onNavigate('home')} />
-      <div className="food-list">
+    <main className="feature-page monthly-page">
+      <PageHeader title="이달의 전승 음식" onBack={() => onNavigate('home')} />
+      <header className="monthly-intro">
+        <span className="monthly-eyebrow">MONTHLY FAVORITES</span>
+        <h1>이달의 전승 음식 <em>TOP 6</em></h1>
         <p className="feature-muted">이번 달 좋아요·저장 활동을 기준으로 선정했어요.</p>
+      </header>
+      <div className="food-list" aria-label="이달의 전승 음식 TOP 6">
         {monthlyLoading && <p role="status">이달의 순위를 불러오는 중…</p>}
         {screenError && <p role="alert">{screenError}</p>}
-        {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p>아직 이번 달에 소개할 전승 음식이 없어요.</p>}
+        {!monthlyLoading && !screenError && monthlyRecipes.length === 0 && <p className="monthly-empty">아직 이번 달에 소개할 전승 음식이 없어요.</p>}
         {monthlyRecipes.map((item, index) => {
           const detail = monthlyDetails[item.recipe_id]
-          return <div className="food-list-card" key={item.recipe_id}>
-            <button className="food-list-open" type="button" onClick={() => navigate(recipePath(item.recipe_id))}>
-              <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
-              <span><b>{String(item.rank ?? index + 1).padStart(2, '0')} {item.title || '이름 없는 레시피'}</b></span>
-              <span aria-hidden="true">›</span>
+          const title = item.title || '이름 없는 레시피'
+          const rank = String(item.rank ?? index + 1).padStart(2, '0')
+          return <article className={`monthly-card ${index === 0 ? 'is-featured' : ''}`} key={item.recipe_id}>
+            <button className="monthly-card-open" type="button"
+              aria-label={`${rank} ${title} 레시피 보기`}
+              onClick={() => navigate(recipePath(item.recipe_id))}>
+              <div className="monthly-card-media">
+                <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
+                <span className="monthly-rank" aria-hidden="true">{rank}</span>
+              </div>
+              <div className="monthly-card-info">
+                {index === 0 && <span className="monthly-feature-label">이달의 가장 사랑받은 음식</span>}
+                <h2>{title}</h2>
+                {detail?.transmitter_name && <small>{detail.transmitter_name} 전승자의 레시피</small>}
+                {index === 0 && detail?.transmitter_quote && <p className="monthly-quote">“{detail.transmitter_quote}”</p>}
+                <span className="monthly-view-link" aria-hidden="true">레시피 보러 가기 <span>›</span></span>
+              </div>
             </button>
-            <div className="food-list-actions" aria-label={`${item.title} 좋아요와 스크랩`}>
-              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id} aria-pressed={detail?.is_liked ?? false} aria-label={`${item.title} ${detail?.is_liked ? '좋아요 취소' : '좋아요'}`} onClick={() => void updateMonthlyReaction(item.recipe_id, 'like')}>
-                <span aria-hidden="true">♥</span> {detail ? detail.like_count : '—'}
+            <div className="monthly-reactions" aria-label={`${title} 좋아요와 스크랩`}>
+              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id}
+                aria-pressed={detail?.is_liked ?? false}
+                aria-label={`${title} ${detail?.is_liked ? '좋아요 취소' : '좋아요'}`}
+                onClick={() => void updateMonthlyReaction(item.recipe_id, 'like')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 4.1-8.8 10-8.8 10S3.2 12.8 3.2 8.7a4.5 4.5 0 0 1 8.8 1.3 4.5 4.5 0 0 1 8.8 1.3Z"/></svg>
+                {detail ? detail.like_count : '—'}
               </button>
-              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id} aria-pressed={detail?.is_saved ?? false} aria-label={`${item.title} ${detail?.is_saved ? '스크랩 취소' : '스크랩'}`} onClick={() => void updateMonthlyReaction(item.recipe_id, 'save')}>
-                <span aria-hidden="true">▣</span> {detail ? detail.save_count : '—'}
+              <button type="button" disabled={!detail || monthlyActionBusy === item.recipe_id}
+                aria-pressed={detail?.is_saved ?? false}
+                aria-label={`${title} ${detail?.is_saved ? '스크랩 취소' : '스크랩'}`}
+                onClick={() => void updateMonthlyReaction(item.recipe_id, 'save')}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4-6 4z"/></svg>
+                {detail ? detail.save_count : '—'}
               </button>
             </div>
-          </div>
+          </article>
         })}
       </div>
     </main>

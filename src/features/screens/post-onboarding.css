@@ -128,17 +128,37 @@
   .cook-controls.is-first .feature-primary { grid-column: 2; }
   .cook-controls .cook-prev { @apply min-h-12 rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
   .cook-controls .feature-primary { @apply m-0 min-h-12 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
-  .food-list { @apply flex flex-col gap-[13px] pt-[30px]; }
-  .food-list-card { @apply w-full rounded-lg border border-[#f0ede7] bg-white p-2; }
-  .food-list-open { @apply grid w-full cursor-pointer grid-cols-[88px_1fr_20px] items-center gap-3 border-0 bg-transparent p-0 text-left; }
-  .food-list-open img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }
-  .food-list-open b { @apply text-xs; }
-  .food-list-open span:last-child { @apply text-[22px] text-[#807a71]; }
-  .food-list-actions { @apply mt-2 flex justify-end gap-2 border-t border-[#f0ede7] pt-2; }
-  .food-list-actions button { @apply flex min-h-8 cursor-pointer items-center gap-1 rounded-md border border-[#e5ded4] bg-white px-3 text-[12px] text-[#655f55]; }
-  .food-list-actions button[aria-pressed="true"] { @apply border-[#b9472f] bg-[#fff4ef] text-[#b9472f]; }
-  .food-list-actions button:disabled { @apply cursor-not-allowed opacity-50; }
-  .food-list-actions button span { @apply text-base; }
+  .monthly-page { @apply bg-[#f4efe8] pb-12; }
+  .monthly-intro { @apply pb-3 pt-[66px]; }
+  .monthly-eyebrow { @apply text-[10px] font-semibold tracking-[.22em] text-[#b34b35]; }
+  .monthly-intro h1 { @apply mb-2 mt-3 font-serif text-[25px] font-semibold leading-[1.3] text-[#37382f]; }
+  .monthly-intro h1 em { @apply not-italic text-[#b9472f]; }
+  .monthly-intro p { @apply mt-2 text-[12px]; }
+  .food-list { @apply flex flex-col gap-[16px] pt-4; }
+  .monthly-empty { @apply rounded-2xl bg-white px-4 py-8 text-center text-[12px] text-[#7a746b]; }
+  .monthly-card { @apply overflow-hidden rounded-[16px] border border-[#e6ded1] bg-[#fffdfa]; box-shadow:0 4px 18px #3e362c0c; }
+  .monthly-card-open { @apply flex w-full cursor-pointer items-center gap-[14px] border-0 bg-transparent p-[12px] text-left; }
+  .monthly-card-media { @apply relative h-[100px] w-[106px] shrink-0 overflow-hidden rounded-[11px] bg-[#e9e1d6]; }
+  .monthly-card-media img { @apply block h-full w-full object-cover; }
+  .monthly-rank { @apply absolute left-2 top-2 grid h-[30px] min-w-[30px] place-items-center rounded-lg bg-[#50604b] px-1 font-serif text-[15px] font-bold text-white; }
+  .monthly-card-info { @apply flex min-w-0 flex-1 flex-col items-start; }
+  .monthly-card-info h2 { @apply m-0 font-serif text-[17px] font-semibold leading-[1.35] text-[#383a32]; }
+  .monthly-card-info small { @apply mt-[7px] text-[11px] leading-[1.5] text-[#817b71]; }
+  .monthly-view-link { @apply mt-3 text-[11px] font-medium text-[#a34431]; }
+  .monthly-view-link span { @apply ml-1 text-sm; }
+  .monthly-feature-label { @apply mb-2 text-[10px] font-semibold text-[#b9472f]; }
+  .monthly-quote { @apply mb-0 mt-2 text-[11px] leading-[1.5] text-[#68675f]; }
+  .monthly-card.is-featured .monthly-card-open { @apply flex-col items-stretch gap-0 p-0; }
+  .monthly-card.is-featured .monthly-card-media { @apply h-[200px] w-full rounded-none; }
+  .monthly-card.is-featured .monthly-rank { @apply left-4 top-4 h-10 min-w-10 text-[20px]; }
+  .monthly-card.is-featured .monthly-card-info { @apply px-4 pb-3 pt-4; }
+  .monthly-card.is-featured .monthly-card-info h2 { @apply text-[21px]; }
+  .monthly-reactions { @apply flex justify-end gap-3 border-t border-[#eee8df] px-4 py-2.5; }
+  .monthly-reactions button { @apply flex min-h-8 cursor-pointer items-center gap-1.5 border-0 bg-transparent px-1 text-[12px] text-[#777269]; }
+  .monthly-reactions button[aria-pressed="true"] { @apply text-[#b9472f]; }
+  .monthly-reactions button:disabled { @apply cursor-not-allowed opacity-50; }
+  .monthly-reactions svg { @apply h-[17px] w-[17px]; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+  .monthly-reactions button[aria-pressed="true"] svg { fill:currentColor; }
   .recipe-quote-card small { @apply block text-[10px] leading-[1.5] text-[#817b71]; }
   .profile-summary { @apply flex flex-col items-center px-0 pt-[45px] pb-7 text-center; }
   .profile-avatar { @apply grid h-[82px] w-[82px] place-items-center rounded-full bg-[#dfe5db] text-[29px] text-[#64745e]; }
