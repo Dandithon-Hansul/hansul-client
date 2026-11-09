@@ -41,6 +41,7 @@ export function loginAsNewUser(withProfile = false) {
       display_name: '새내기',
       avatar_url: null,
       region: null,
+      bio: null,
       food_preferences: [],
       stats: { transmitted_recipes: 0, saved_recipes: 0, likes_received: 0 },
     }

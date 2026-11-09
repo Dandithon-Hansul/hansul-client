@@ -31,6 +31,7 @@ function seed(): MockDb {
         display_name: '김한술',
         avatar_url: null,
         region: { code: '47170', sido: '경상북도', sigungu: '안동시', dong: null },
+        bio: '안녕하세요 음식 좋아합니다',
         food_preferences: ['탕·찌개', '찜·조림'],
         stats: { transmitted_recipes: 2, saved_recipes: 8, likes_received: 34 },
       },

@@ -13,6 +13,8 @@ export type MyProfile = {
   display_name: string
   avatar_url: string | null
   region: Region | null
+  /** 소개 한 줄 (⚠️ 백엔드 GET /api/profiles/me 응답에 아직 없음 → 없으면 null) */
+  bio: string | null
   food_preferences: string[]
   stats: {
     transmitted_recipes: number
@@ -34,6 +36,8 @@ export type ProfileUpdateBody = {
   region_code?: string
   food_preferences?: string[]
   avatar_url?: string | null
+  /** 소개 — 비우면 null (⚠️ 백엔드 PATCH 스키마에 bio 추가 요청 중) */
+  bio?: string | null
 }
 
 /** 프로필 그리드 한 칸에 필요한 최소 정보 */

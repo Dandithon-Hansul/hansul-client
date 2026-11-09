@@ -64,6 +64,7 @@ export async function getMyProfile(): Promise<MyProfile> {
     ...raw,
     avatar_url: raw.avatar_url ?? null,
     region: normalizeRegion(raw.region),
+    bio: raw.bio ?? null,
     food_preferences: raw.food_preferences ?? [],
     stats: {
       transmitted_recipes: raw.stats?.transmitted_recipes ?? 0,
@@ -91,6 +92,7 @@ export async function setupProfile(body: ProfileSetupBody): Promise<ProfileSetup
     display_name: body.display_name,
     avatar_url: previous?.avatar_url ?? null,
     region: region ? { ...region, dong: null } : null,
+    bio: previous?.bio ?? null,
     food_preferences: body.food_preferences,
     stats: previous?.stats ?? { transmitted_recipes: 0, saved_recipes: 0, likes_received: 0 },
   }
@@ -110,6 +112,7 @@ export async function updateMyProfile(body: ProfileUpdateBody): Promise<void> {
   if (!profile) throw new ApiError(404, 'PROFILE_NOT_FOUND', '프로필이 없어요.')
   if (body.display_name !== undefined) profile.display_name = body.display_name
   if (body.avatar_url !== undefined) profile.avatar_url = body.avatar_url
+  if (body.bio !== undefined) profile.bio = body.bio
   if (body.food_preferences !== undefined) profile.food_preferences = body.food_preferences
   if (body.region_code !== undefined) {
     const region = findRegionByCode(body.region_code)

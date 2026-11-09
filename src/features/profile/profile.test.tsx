@@ -9,6 +9,7 @@ describe('마이페이지', () => {
     renderApp('/profile')
     expect(await screen.findByText('김한술')).toBeInTheDocument()
     expect(screen.getByText('경상북도 · 안동시')).toBeInTheDocument()
+    expect(screen.getByText('안녕하세요 음식 좋아합니다')).toBeInTheDocument() // 소개
     const stats = screen.getAllByRole('definition').map((item) => item.textContent)
     expect(stats).toEqual(['2', '8', '34'])
     expect(await screen.findByRole('link', { name: '안동 찜닭' })).toBeInTheDocument()
@@ -46,6 +47,7 @@ describe('프로필 편집', () => {
     const user = renderApp('/profile/edit')
     const nameInput = await screen.findByLabelText('이름')
     expect(nameInput).toHaveValue('김한술')
+    expect(screen.getByLabelText('소개')).toHaveValue('안녕하세요 음식 좋아합니다')
     expect(screen.getByText('경상북도 · 안동시')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장하기' })).toBeDisabled()
 
@@ -74,6 +76,24 @@ describe('프로필 편집', () => {
     const saved = readMockDb().profiles['mock-user-demo']
     expect(saved.display_name).toBe('한술할매')
     expect(saved.region?.code).toBe('27000')
+  })
+
+  it('소개만 바꿔도 저장할 수 있고, 마이페이지 이름 아래에 보인다 (다 지우면 소개 없음)', async () => {
+    loginAsDemo()
+    const user = renderApp('/profile/edit')
+    const bioInput = await screen.findByLabelText('소개')
+    await user.clear(bioInput)
+    await user.type(bioInput, '안동에서 찜닭 40년째')
+    await user.click(screen.getByRole('button', { name: '저장하기' }))
+    expect(await screen.findByText('안동에서 찜닭 40년째')).toBeInTheDocument()
+    expect(readMockDb().profiles['mock-user-demo'].bio).toBe('안동에서 찜닭 40년째')
+
+    await user.click(screen.getByRole('link', { name: '프로필 편집' }))
+    await user.clear(await screen.findByLabelText('소개'))
+    await user.click(screen.getByRole('button', { name: '저장하기' }))
+    expect(await screen.findByRole('link', { name: '프로필 편집' })).toBeInTheDocument()
+    expect(screen.queryByText('안동에서 찜닭 40년째')).not.toBeInTheDocument()
+    expect(readMockDb().profiles['mock-user-demo'].bio).toBeNull()
   })
 })
 

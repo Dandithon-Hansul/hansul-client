@@ -14,6 +14,7 @@ import { errorText, useMyProfile } from './useMyProfile'
 import './profile.css'
 
 const NAME_MAX = 12
+const BIO_MAX = 50 // 한 줄 소개 (Figma: 이름 아래 한 줄)
 
 function toOption(profile: MyProfile): RegionOption | null {
   const region = profile.region
@@ -26,6 +27,7 @@ function EditForm({ profile }: { profile: MyProfile }) {
   const navigate = useNavigate()
   const { signOut } = useAuth()
   const [name, setName] = useState(profile.display_name)
+  const [bio, setBio] = useState(profile.bio ?? '')
   const [region, setRegion] = useState<RegionOption | null>(() => toOption(profile))
   const [photo, setPhoto] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -42,8 +44,10 @@ function EditForm({ profile }: { profile: MyProfile }) {
 
   const trimmed = name.trim()
   const nameChanged = trimmed !== profile.display_name
+  const trimmedBio = bio.trim()
+  const bioChanged = trimmedBio !== (profile.bio ?? '')
   const regionChanged = (region?.code ?? null) !== (profile.region?.code ?? null)
-  const canSave = (nameChanged || regionChanged || photo !== null) && trimmed.length > 0 && !saving
+  const canSave = (nameChanged || bioChanged || regionChanged || photo !== null) && trimmed.length > 0 && !saving
 
   function pickPhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
@@ -72,6 +76,7 @@ function EditForm({ profile }: { profile: MyProfile }) {
       // 바뀐 필드만 보냄 (명세서: 일부 필드만 보내도 됨)
       const body: ProfileUpdateBody = {}
       if (nameChanged) body.display_name = trimmed
+      if (bioChanged) body.bio = trimmedBio || null // 다 지우면 소개 없음
       if (regionChanged && region) body.region_code = region.code
       if (photo) body.avatar_url = await uploadAvatar(photo)
       await updateMyProfile(body)
@@ -95,6 +100,10 @@ function EditForm({ profile }: { profile: MyProfile }) {
         <label className="profile-edit-row">
           <span>이름</span>
           <input value={name} maxLength={NAME_MAX} onChange={(event) => setName(event.target.value)} aria-label="이름" />
+        </label>
+        <label className="profile-edit-row">
+          <span>소개</span>
+          <input value={bio} maxLength={BIO_MAX} onChange={(event) => setBio(event.target.value)} placeholder="나를 한 줄로 소개해주세요" aria-label="소개" />
         </label>
         <button type="button" className="profile-edit-row" onClick={() => setSheetOpen(true)} aria-haspopup="dialog">
           <span>거주지역</span>
@@ -124,7 +133,7 @@ function EditForm({ profile }: { profile: MyProfile }) {
   )
 }
 
-/** [S-08] 프로필 편집 — 사진·이름·거주지역 수정 후 저장하면 마이페이지로 */
+/** [S-08] 프로필 편집 — 사진·이름·소개·거주지역 수정 후 저장하면 마이페이지로 */
 function ProfileEditPage() {
   const goBack = useGoBack('/profile')
   const { profile, error } = useMyProfile()
