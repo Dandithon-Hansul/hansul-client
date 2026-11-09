@@ -120,7 +120,7 @@ jobs:
           try:
               status, typ, _, html = retrieve(site)
               print(f"Deployment homepage: HTTP {status}; content-type={typ}", flush=True)
-              scripts = re.findall(r'<script[^>]+src=["\\\']([^"\\\']+\\.js(?:\\?[^"\\\']*)?)["\\\']', html.decode("utf-8", errors="replace"), flags=re.I)
+              scripts = re.findall(r'src="([^"]+\\.js(?:\\?[^"]*)?)"', html.decode("utf-8", errors="replace"), flags=re.I)
               print(f"JS entry scripts found: {len(scripts)}", flush=True)
               js = b""
               for script in scripts[:4]:
