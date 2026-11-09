@@ -120,8 +120,9 @@ jobs:
           try:
               status, typ, _, html = retrieve(site)
               print(f"Deployment homepage: HTTP {status}; content-type={typ}", flush=True)
-              scripts = re.findall(r'src="([^"]+\\.js(?:\\?[^"]*)?)"', html.decode("utf-8", errors="replace"), flags=re.I)
+              scripts = [src for src in re.findall(r'src="([^"]+)"', html.decode("utf-8", errors="replace"), flags=re.I) if urllib.parse.urlparse(src).path.endswith(".js")]
               print(f"JS entry scripts found: {len(scripts)}", flush=True)
+              if not scripts: print("HTML snippet:", html[:400].decode("utf-8", errors="replace"), flush=True)
               js = b""
               for script in scripts[:4]:
                   url = urllib.parse.urljoin(site, script)
@@ -134,7 +135,7 @@ jobs:
                   print("  expected Supabase project URL present:", b"ksshvrioacbqnzoalgeb.supabase.co" in js, flush=True)
                   print("  publishable Supabase key prefix present:", b"sb_publishable_" in js, flush=True)
                   print("  production backend URL present:", b"hansul-server.vercel.app" in js, flush=True)
-                  print("  any Supabase URL present:", bool(re.search(rb'https?://[a-z0-9-]+\\.supabase\\.co', js)), flush=True)
+                  print("  any Supabase URL present:", b".supabase.co" in js, flush=True)
               else:
                   print("No readable JS bundle found; cannot inspect client config", flush=True)
           except Exception as exc:
