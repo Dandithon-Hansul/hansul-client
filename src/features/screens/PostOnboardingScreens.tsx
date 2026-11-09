@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
+import RecipePhoto from '../../components/RecipePhoto'
 import { createRecordingFile } from '../../lib/recordingFile'
 import { ApiError } from '../../lib/api/client'
 import { useAuth } from '../auth/auth-context'
@@ -534,7 +535,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       {!recipeId && <p role="alert">레시피를 찾을 수 없어요.</p>}
       {recipe && <>
         <section className="recipe-hero">
-          <img className="recipe-detail-image" src={recipe.hero_image_url ?? '/images/andong-jjimdak.png'} alt={recipe.title} />
+          <RecipePhoto className="recipe-detail-image" src={recipe.hero_image_url} title={recipe.title} />
           <span className="recipe-hero-gradient" />
           <button className="recipe-back" type="button" onClick={() => onNavigate('home')} aria-label="뒤로가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
           <div className="recipe-hero-actions">
@@ -595,7 +596,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <button type="button" disabled={currentImageStatus.generating} onClick={() => { if (recipe) void requestStepImages(recipe) }}>{currentImageStatus.generating ? '이미지 재시도 중…' : '이미지 다시 시도하기'}</button>
         </div>}
         <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
-        <img className="cook-image" src={step.image_url ?? recipe?.hero_image_url ?? '/images/andong-jjimdak.png'} alt={step.title} />
+        <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={recipe?.title || step.title} />
         {!step.image_url && currentImageStatus?.failedOrders.includes(step.order) && <p className="cook-image-fallback-note">이 단계의 이미지 대신 임시 이미지를 보여드리고 있어요.</p>}
         <p className="cook-description">{step.description}</p>
         {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
@@ -629,7 +630,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
               aria-label={`${rank} ${title} 레시피 보기`}
               onClick={() => navigate(recipePath(item.recipe_id))}>
               <div className="monthly-card-media">
-                <img src={item.hero_image_url ?? '/images/andong-jjimdak.png'} alt="" />
+                <RecipePhoto src={detail?.hero_image_url || item.hero_image_url} title={title} />
                 <span className="monthly-rank" aria-hidden="true">{rank}</span>
               </div>
               <div className="monthly-card-info">

@@ -1,0 +1,7 @@
+.recipe-photo-empty { display:flex; min-height:80px; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:12px; box-sizing:border-box; background:linear-gradient(135deg,#e8e3d8,#d3dbc9); color:#51624c; text-align:center; overflow:hidden; }
+.recipe-photo-empty svg { width:39px; height:39px; flex-shrink:0; }
+.recipe-photo-empty span { font-size:12px; font-weight:600; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.recipe-photo-empty small { font-size:10px; opacity:.85; }
+.recipe-feature .home-recipe-photo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.monthly-card-media .recipe-photo-empty { width:100%; height:100%; }
+.recipe-hero .recipe-photo-empty { position:absolute; inset:0; width:100%; height:100%; }

@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { getHomeFeed, searchRecipes, type HomeFeed, type RecipeSearchResult } from '../../lib/api/home'
 import { getRecommendations, type RecommendationItem } from '../../lib/api/recipes'
 import { IS_MOCK } from '../../lib/env'
+import RecipePhoto from '../../components/RecipePhoto'
 import { isValidRecipeId } from '../../lib/recipeId'
 import './home.css'
 
@@ -112,7 +113,7 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
               <span>이달의 전승 음식</span><span className="section-arrow" aria-hidden="true">›</span>
             </button>
             {topRecipe ? <button className="recipe-feature" type="button" onClick={() => onRecipeSelect(topRecipe.recipe_id)}>
-              {topRecipe.hero_image_url && <img src={topRecipe.hero_image_url} alt="" />}
+              <RecipePhoto className="home-recipe-photo" src={topRecipe.hero_image_url} title={topRecipe.title || '전승 음식'} />
               <span className="recipe-gradient" />
               <span className="recipe-title">{String(topRecipe.rank ?? 1).padStart(2, '0')} {topRecipe.title}</span>
             </button> : <p className="home-empty">아직 소개할 전승 음식이 없어요.</p>}
@@ -121,7 +122,7 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
           <section className="recipe-section recommendation-section">
             <h2>{(feed?.greeting_name || name || '한술')}님을 위한 추천 음식</h2>
             {recommended ? <button className="recipe-feature recommendation-card" type="button" onClick={() => onRecipeSelect(recommended.recipe_id)}>
-              {recommended.hero_image_url && <img src={recommended.hero_image_url} alt="" />}
+              <RecipePhoto className="home-recipe-photo" src={recommended.hero_image_url} title={recommended.title || '추천 음식'} />
               <span className="recipe-gradient" />
               {recommended.region_tag && <span className="recipe-location">{recommended.region_tag}</span>}
               <span className="recipe-title">{recommended.title}</span>
