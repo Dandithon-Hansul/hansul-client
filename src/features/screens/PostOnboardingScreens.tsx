@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { cookPath, recipePath } from '../../app/paths'
+import { IS_MOCK } from '../../lib/env'
+import { useAuth } from '../auth/auth-context'
 import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
 import './post-onboarding.css'
 
@@ -13,6 +16,7 @@ function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
 
 function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }: Props) {
   const navigate = useNavigate()
+  const { session } = useAuth()
   const [recording, setRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [recordPhoto, setRecordPhoto] = useState<File | null>(null)
@@ -46,9 +50,11 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const chatAudioBlocked = useRef(false)
   const [chatAudioNeedsTap, setChatAudioNeedsTap] = useState(false)
   const imageGenerationRequested = useRef(new Set<string>())
-  const recipeId = searchParams.get('id') || draftId || 'r-daegu-yukgaejang'
+  // 예시 레시피(대구식 육개장)는 mock 에서만. 실제 서버에선 이 id 가 없어서 400
+  const recipeId = searchParams.get('id') || draftId || (IS_MOCK ? 'r-daegu-yukgaejang' : '')
   useEffect(() => {
     if (page === 'recipe' || page === 'cook') {
+      if (!recipeId) return undefined
       let active = true
       getRecipe(recipeId).then((data) => { if (active) setRecipe(data) }).catch(() => { if (active) setScreenError('레시피를 불러오지 못했어요.') })
       return () => { active = false }
@@ -63,6 +69,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   useEffect(() => {
     if (page !== 'cook' || !recipe || recipe.recipe_id !== recipeId) return
+    // 단계 이미지 생성은 작성자만 가능 (백엔드 /api/steps/images 가 작성자 레시피만 찾음) — 다른 사람 레시피면 요청하지 않음
+    if (!IS_MOCK && recipe.transmitter_id !== session?.userId) return
     const hasMissingStepImage = recipe.steps.some((step) => !step.image_url)
     if (!hasMissingStepImage || imageGenerationRequested.current.has(recipe.recipe_id)) return
     imageGenerationRequested.current.add(recipe.recipe_id)
@@ -75,7 +83,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         }),
       } : current)
     }).catch(() => setScreenError('단계 이미지를 불러오지 못했어요.'))
-  }, [page, recipe, recipeId])
+  }, [page, recipe, recipeId, session?.userId])
 
   useEffect(() => () => mediaStream.current?.getTracks().forEach((track) => track.stop()), [])
   useEffect(() => () => chatMediaStream.current?.getTracks().forEach((track) => track.stop()), [])
@@ -371,6 +379,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   if (page === 'recipe') return (
     <main className="feature-page recipe-page">
       {screenError && <p role="alert">{screenError}</p>}
+      {!recipeId && <p role="alert">레시피를 찾을 수 없어요.</p>}
       {recipe && <>
         <section className="recipe-hero">
           <img className="recipe-detail-image" src={recipe.hero_image_url ?? '/images/andong-jjimdak.png'} alt={recipe.title} />
@@ -404,7 +413,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           </div>}
           <div className="recipe-stats"><span>{recipe.cooking_time}분 <small>조리시간</small></span><span>{recipe.difficulty} <small>난이도</small></span><span>{recipe.servings}인분 <small>인분</small></span></div>
           <h3>재료</h3><ul>{recipe.ingredients.map((item) => <li key={item.name}>{item.name} <span>{item.amount ?? ''}{item.unit ?? ''}</span></li>)}</ul>
-          <button className="feature-primary" type="button" onClick={() => { setCookStep(0); onNavigate('cook') }}>단계별로 따라 만들기</button>
+          <button className="feature-primary" type="button" onClick={() => { setCookStep(0); setScreenError(''); navigate(cookPath(recipeId)) }}>단계별로 따라 만들기</button>
         </div>
       </>}
     </main>
@@ -413,11 +422,11 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   if (page === 'cook') {
     const steps = recipe?.steps ?? []
     const step = steps[cookStep]
-    if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => onNavigate('recipe')} /><p>{screenError || '조리 단계를 불러오는 중…'}</p></main>
+    if (!step) return <main className="feature-page"><PageHeader title="단계별 조리" onBack={() => navigate(recipePath(recipeId))} /><p>{screenError || (recipeId ? '조리 단계를 불러오는 중…' : '레시피를 찾을 수 없어요.')}</p></main>
     return (
       <main className="feature-page cook-page">
         <header className="cook-topbar">
-          <button type="button" onClick={() => onNavigate('recipe')} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
+          <button type="button" onClick={() => navigate(recipePath(recipeId))} aria-label="레시피로 돌아가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
           <div className="cook-segments" aria-label={`${cookStep + 1} / ${steps.length} 단계`}>
             {steps.map((item, index) => <span key={item.order} className={index === cookStep ? 'is-current' : ''} />)}
           </div>
