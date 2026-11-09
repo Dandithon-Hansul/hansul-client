@@ -4,6 +4,7 @@ import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
 import { useAuth } from '../auth/auth-context'
 import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
+import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
 import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
@@ -24,7 +25,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [chatVoiceRecording, setChatVoiceRecording] = useState(false)
   const [selectedSuggestion, setSelectedSuggestion] = useState('')
   const [chatImagePath, setChatImagePath] = useState<string | undefined>()
-  const [messages, setMessages] = useState<Array<{ from: 'ai' | 'user'; text: string }>>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     { from: 'ai', text: '오늘은 어떤 음식의 이야기를 남겨볼까요?' },
   ])
   const [cookStep, setCookStep] = useState(0)
@@ -220,7 +221,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   async function sendChatMessage(message: string) {
     const recipe_id = draftId || 'draft-mock'
-    setMessages((current) => [...current, { from: 'user', text: message }])
+    const responseId = crypto.randomUUID()
+    setMessages((current) => [
+      ...current,
+      { from: 'user', text: message },
+      { from: 'ai', text: CHAT_PENDING_TEXT, responseId },
+    ])
     setSelectedSuggestion(message)
     setDraft('')
     stopChatAudio()
@@ -231,10 +237,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: true }, (event) => {
         if (event.event === 'chunk' && typeof event.data.text === 'string') {
           answerText += event.data.text
-          setMessages((current) => {
-            const withoutPending = current.at(-1)?.from === 'ai' && current.at(-1)?.text === '답변을 작성하고 있어요…' ? current.slice(0, -1) : current
-            return [...withoutPending, { from: 'ai', text: answerText }]
-          })
+          setMessages((current) => appendChatStreamChunk(current, responseId, event.data.text as string))
         }
         if (event.event === 'audio' && typeof event.data.url === 'string') {
           hasAudioSegments = true
@@ -245,6 +248,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         }
         if (event.event === 'error') setScreenError(String(event.data.message ?? '채팅 처리 중 오류가 발생했어요.'))
       })
+      if (!answerText) setMessages((current) => current.filter((item) => item.responseId !== responseId))
       if (analysis?.questions.length) {
         const nextAnalysis = await analyzeRecipe(recipe_id)
         setAnalysis(nextAnalysis)
@@ -256,7 +260,10 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         }
       }
       setChatImagePath(undefined)
-    } catch { setScreenError('메시지를 보내지 못했어요.') }
+    } catch {
+      setMessages((current) => current.filter((item) => item.responseId !== responseId || item.text !== CHAT_PENDING_TEXT))
+      setScreenError('메시지를 보내지 못했어요.')
+    }
     finally { setBusy(false) }
   }
 
@@ -361,7 +368,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       <PageHeader title="음식 이야기" onBack={() => onNavigate('record')} />
       <div className="chat-context"><span>AI 음성 기록</span><h2>어떤 음식의 이야기를<br />남겨볼까요?</h2></div>
       <div className="chat-messages" aria-live="polite">
-        {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={`${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
+        {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
       </div>
       {screenError && <p role="alert">{screenError}</p>}
       {chatAudioNeedsTap && <button type="button" className="chat-audio-retry" onClick={resumeChatAudio}>AI 답변 음성 재생하기</button>}
