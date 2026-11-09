@@ -94,9 +94,11 @@ npm run dev -- --host 0.0.0.0
 | `VITE_USE_MOCK` | `true` 면 Supabase·백엔드 없이 브라우저 안 가짜 데이터로 실행 |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Supabase 대시보드 › Project Settings › API |
 | `VITE_AUTH_EMAIL_DOMAIN` | 아이디 → 이메일 변환용 도메인 (기본 `hansul.app`) |
-| `VITE_API_BASE_URL` | 배포된 백엔드 주소. 비우면 같은 주소의 `/api` |
+| `VITE_API_BASE_URL` | 배포된 백엔드 주소. 비우면 같은 주소의 `/api` — Vercel 배포는 `vercel.json` 이 `/api/*` 를 백엔드로 넘기니 **비워 둠** |
 | `VITE_API_PROXY_TARGET` | 개발 중 `/api` 를 넘겨줄 로컬 백엔드 (예: `http://localhost:3000`) |
 | `VITE_KAKAO_MAP_KEY` | 카카오맵 JavaScript 키. 비우면 키 없이 동작하는 SVG 지도 |
+
+**Vercel 배포 환경 변수**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`(공개용 `sb_publishable_` 키 — service_role·`sb_secret_` 키는 절대 넣지 않기), `VITE_AUTH_EMAIL_DOMAIN` 을 넣고 `VITE_USE_MOCK`·`VITE_API_BASE_URL` 은 비워 둡니다. Vite 는 빌드할 때 값을 코드에 넣으므로 환경 변수를 바꾼 뒤엔 **Redeploy** 해야 적용돼요.
 
 ### 화면 주소
 
@@ -143,6 +145,6 @@ npm run dev -- --host 0.0.0.0
 - `GET /api/map/regions/:region_code/recipes?limit=10` — `:region_code` 는 지역 이름이 아니라 코드(예: `47170`), 인기순(좋아요+저장) 정렬, 공개 발행 레시피만
 - 대구: 반영 완료(백엔드 PR #33) — `27000` = 대구 전체(군위 포함). 프론트는 `27000` 으로 한 번 요청하고, 혹시 404 면 구·군 9개로 나눠 불러 합치는 대비 코드가 남아 있음 (`src/lib/api/map.ts`)
 - 발행할 때 레시피에 `region_code` 채우기: 반영 완료(백엔드 PR #35, 프로필 지역 복사)
-- CORS: 반영 완료(백엔드 PR #35) — 서버 환경 변수 `FRONTEND_ORIGIN` 에 프론트 배포 주소를 넣어야 동작. 프론트 배포 쪽은 `VITE_API_BASE_URL` 에 서버 주소
+- CORS: 프론트 배포(Vercel)는 `vercel.json` 이 `/api/*` 를 백엔드로 넘겨서 같은 주소로 요청 → CORS 필요 없음 (`VITE_API_BASE_URL` 은 비워 둠). `VITE_API_BASE_URL` 에 서버 주소를 직접 넣을 때만 서버 `FRONTEND_ORIGIN`(쉼표로 여러 개, 백엔드 PR #42)에 프론트 주소 필요
 - 데모 시드: 여러 시·군에 공개 레시피를 넣어 빈 지도가 되지 않게 (mock 예시: `src/lib/mock/mockMap.ts`)
 
