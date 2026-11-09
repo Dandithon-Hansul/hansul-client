@@ -13,7 +13,7 @@ jobs:
       - name: Read published Supabase auth settings without signing up users
         run: |
           python3 - <<'PY'
-          import json, re
+          import json, re, subprocess
           import urllib.parse
           import urllib.request
           import urllib.error
@@ -27,6 +27,9 @@ jobs:
 
           site = "https://hansul-client.vercel.app"
           supabase = "https://ksshvrioacbqnzoalgeb.supabase.co"
+          for record in ("MX", "A", "AAAA"):
+              p = subprocess.run(["dig", "+short", record, "hansul.app"], text=True, capture_output=True, timeout=8)
+              print("hansul.app DNS", record, "present:", bool(p.stdout.strip()), flush=True)
           for path in ["/", "/signup", "/login"]:
               status, _ = req(site + path)
               print(f"FRONTEND {path}: HTTP {status}", flush=True)
