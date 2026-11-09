@@ -5,17 +5,18 @@ type RecipePhotoProps = {
   src: string | null | undefined
   title: string
   className?: string
+  recipeTitle?: string
 }
 
 /** Never show an unrelated food photo when the recipe has no valid image. */
-export default function RecipePhoto({ src, title, className = '' }: RecipePhotoProps) {
+export default function RecipePhoto({ src, title, className = '', recipeTitle }: RecipePhotoProps) {
   const [failedUrls, setFailedUrls] = useState<string[]>([])
   useEffect(() => { setFailedUrls([]) }, [src, title])
   const url = src?.trim() ?? ''
   const isValidUrl = /^https:\/\//i.test(url) || url.startsWith('/images/')
   // The Andong jjimdak image was bundled before remote images were supported.
   // Keep it only for that dish; never substitute it for a different recipe.
-  const andongFallback = /안동\s*찜닭/.test(title) ? '/images/andong-jjimdak.png' : ''
+  const andongFallback = /안동\s*찜닭/.test(recipeTitle ?? title) ? '/images/andong-jjimdak.png' : ''
   const imageUrl = isValidUrl && !failedUrls.includes(url) ? url
     : andongFallback && !failedUrls.includes(andongFallback) ? andongFallback : ''
   if (imageUrl) {

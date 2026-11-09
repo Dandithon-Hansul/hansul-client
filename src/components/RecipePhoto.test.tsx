@@ -35,4 +35,10 @@ describe('레시피 사진', () => {
     expect(screen.getByRole('img', { name: '안동찜닭 사진 준비 중' })).toBeInTheDocument()
   })
 
+  it('안동찜닭 조리 단계 이름만 보이더라도 요리명을 기준으로 대체 사진을 복구한다', () => {
+    render(<RecipePhoto src={null} title="재료 손질하기" recipeTitle="안동 찜닭" />)
+    expect(screen.getByRole('img', { name: '재료 손질하기' }))
+      .toHaveAttribute('src', '/images/andong-jjimdak.png')
+  })
+
 })

@@ -638,7 +638,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         </div>}
         <p className="cook-step-title">{cookStep + 1}. {step.title}</p>
         <div className="cook-media">
-          <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={step.title} />
+          <RecipePhoto className="cook-image" src={step.image_url || recipe?.hero_image_url} title={step.title} recipeTitle={recipe?.title} />
           {currentImageStatus?.generating && !step.image_url && <div className="cook-image-overlay" role="status">
             <span className="cook-spinner" aria-hidden="true" />이미지를 만드는 중이에요
           </div>}
