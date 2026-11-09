@@ -15,6 +15,7 @@ export type RecipeDetail = {
   recipe_id: string;
   title: string;
   hero_image_url: string | null;
+  transmitter_id?: string;
   transmitter_name: string;
   transmitter_avatar_url?: string | null;
   transmitter_region?: string | null;
@@ -85,6 +86,7 @@ const mockDetail: RecipeDetail = {
   recipe_id: "r-daegu-yukgaejang",
   title: "대구식 육개장",
   hero_image_url: "/images/daegu-yukgaejang.png",
+  transmitter_id: "u-kim-hansul",
   transmitter_name: "박순덕",
   transmitter_quote: "대파를 넉넉히 넣어 끓여요.",
   context_summary:
@@ -250,18 +252,6 @@ export async function regenerateStepImage(
         json: { recipe_id: recipeId, hint },
       });
 }
-export async function attachStepPhoto(
-  recipeId: string,
-  order: number,
-  photo_path: string,
-) {
-  return IS_MOCK
-    ? { image_url: "" }
-    : apiFetch<{ image_url: string }>(`/api/steps/${order}/photo`, {
-        method: "POST",
-        json: { recipe_id: recipeId, photo_path },
-      });
-}
 export async function analyzeRecipe(recipeId: string) {
   return IS_MOCK
     ? ({
@@ -310,9 +300,7 @@ export async function uploadSignedFile(
   purpose:
     | "stt_audio"
     | "card_voice"
-    | "chat_image"
-    | "step_photo"
-    | "evaluation_photo",
+    | "chat_image",
   recipeId?: string,
 ) {
   if (IS_MOCK)
@@ -346,30 +334,6 @@ export async function uploadRecipeVoice(recipeId: string, audio_path: string) {
         `/api/recipes/${encodeURIComponent(recipeId)}/voice`,
         { method: "POST", json: { audio_path } },
       );
-}
-export async function evaluateRecipe(
-  body: {
-    recipe_id: string;
-    evaluation: {
-      salt: -2 | -1 | 0 | 1 | 2;
-      consistency: -2 | -1 | 0 | 1 | 2;
-      doneness: -2 | -1 | 0 | 1 | 2;
-      overall: 1 | 2 | 3;
-      rule_followed: boolean;
-    };
-    photo_path?: string;
-  },
-  onEvent: (event: ChatEvent) => void,
-) {
-  if (IS_MOCK) {
-    onEvent({
-      event: "chunk",
-      data: { text: "다음에는 소금을 조금 줄여보세요." },
-    });
-    onEvent({ event: "done", data: { session_id: "mock" } });
-    return;
-  }
-  await streamSse("/api/evaluate", body, onEvent);
 }
 export async function sendRecipeChat(
   body: {

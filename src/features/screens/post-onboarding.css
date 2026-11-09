@@ -74,7 +74,8 @@
   .recipe-hero h1 { @apply absolute bottom-5 left-[22px] m-0 font-serif text-[23px] font-bold text-white; }
   .recipe-detail-content { @apply px-[18px] py-[18px] pb-10; }
   .recipe-detail-content h2 { @apply text-[27px]; }
-  .recipe-author { @apply flex items-center gap-3; }
+    .recipe-author { @apply flex items-center gap-3 border-0 bg-transparent p-0 text-left; cursor: pointer; }
+    .recipe-author:disabled { cursor: default; }
   .recipe-author>img,.recipe-author-fallback { @apply h-10 w-10 shrink-0 rounded-full object-cover; }
   .recipe-author-fallback { @apply grid place-items-center bg-[#d9d3c8] font-serif text-base text-[#605c55]; }
   .recipe-author>div { @apply flex flex-col gap-1; }
@@ -110,7 +111,6 @@
   .cook-controls.is-first .feature-primary { grid-column: 2; }
   .cook-controls .cook-prev { @apply min-h-12 rounded-[3px] border-0 bg-[#BEB8B0] text-[13px] font-semibold text-white; }
   .cook-controls .feature-primary { @apply m-0 min-h-12 justify-center rounded-[3px] px-3 text-center text-[13px]; background-color: #B9472F; }
-  .cook-evaluation { @apply mt-8; }
   .food-list { @apply flex flex-col gap-[13px] pt-[30px]; }
   .food-list-card { @apply grid w-full grid-cols-[88px_1fr_20px] items-center gap-3 rounded-lg border border-[#f0ede7] bg-white p-2 text-left; }
   .food-list-card img { @apply h-[72px] w-[88px] rounded-[5px] object-cover; }

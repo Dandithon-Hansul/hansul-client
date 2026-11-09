@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { analyzeRecipe, attachStepPhoto, createRecipe, evaluateRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
 import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
@@ -33,7 +33,6 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [screenError, setScreenError] = useState('')
   const [busy, setBusy] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
-  const [evaluationText, setEvaluationText] = useState('')
   const [quotePlaying, setQuotePlaying] = useState(false)
   const mediaRecorder = useRef<MediaRecorder | null>(null)
   const mediaStream = useRef<MediaStream | null>(null)
@@ -301,10 +300,10 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <h1>{recipe.title}</h1>
         </section>
         <div className="recipe-detail-content">
-          <div className="recipe-author">
+          <button className="recipe-author" type="button" onClick={() => recipe.transmitter_id && navigate(`/users/${encodeURIComponent(recipe.transmitter_id)}`)} disabled={!recipe.transmitter_id} aria-label={`${recipe.transmitter_name} 전승자 프로필 보기`}>
             {recipe.transmitter_avatar_url ? <img src={recipe.transmitter_avatar_url} alt="" /> : <span className="recipe-author-fallback" aria-hidden="true">{recipe.transmitter_name.slice(0, 1)}</span>}
             <div><strong>{recipe.transmitter_name} 전승자</strong>{recipe.transmitter_region && <small>{recipe.transmitter_region}</small>}</div>
-          </div>
+          </button>
           <div className="recipe-quote-card">
             <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} disabled={!recipe.voice_message_url} aria-label={quotePlaying ? '한마디 음성 일시정지' : '한마디 음성 재생'}>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>
@@ -337,7 +336,6 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         <img className="cook-image" src={step.image_url ?? recipe?.hero_image_url ?? '/images/andong-jjimdak.png'} alt={step.title} />
         <p className="cook-description">{step.description}</p>
         {step.tip && <div className="cook-ai-tip"><span className="cook-ai-mark" aria-hidden="true">AI</span><span>{step.tip}</span></div>}
-        {cookStep === steps.length - 1 && <section className="cook-evaluation"><label className="photo-upload">완성 사진 추가<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; void uploadSignedFile(file, 'step_photo', recipe!.recipe_id).then((signed) => attachStepPhoto(recipe!.recipe_id, step.order, signed.path)).then((result) => setRecipe((current) => current ? { ...current, steps: current.steps.map((item) => item.order === step.order ? { ...item, image_url: result.image_url } : item) } : current)).catch(() => setScreenError('완성 사진을 업로드하지 못했어요.')) }} /></label><p>요리는 어떠셨나요?</p><select aria-label="전체 만족도"><option value="3">만족</option><option value="2">보통</option><option value="1">아쉬움</option></select><button type="button" disabled={busy} onClick={() => { setBusy(true); setEvaluationText(''); void evaluateRecipe({ recipe_id: recipe!.recipe_id, evaluation: { salt: 0, consistency: 0, doneness: 0, overall: 3, rule_followed: true } }, (event) => { if (typeof event.data.text === 'string') setEvaluationText((value) => value + event.data.text) }).catch(() => setEvaluationText('평가를 저장하지 못했어요.')).finally(() => setBusy(false)) }}>맛 평가 받기</button>{evaluationText && <p>{evaluationText}</p>}</section>}
         <nav className={`cook-controls ${cookStep === 0 ? 'is-first' : ''}`}>
           {cookStep > 0 && <button className="cook-prev" type="button" onClick={() => setCookStep((stepIndex) => stepIndex - 1)}>이전 단계</button>}
           <button className="feature-primary" type="button" onClick={() => cookStep === steps.length - 1 ? onNavigate('home') : setCookStep((stepIndex) => stepIndex + 1)}>{cookStep === steps.length - 1 ? '요리 끝내기' : '다음 단계'}</button>
