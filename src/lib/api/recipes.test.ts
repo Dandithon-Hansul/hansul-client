@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, vectorizeSensoryProfile } from './recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sttAudioPath, vectorizeSensoryProfile } from './recipes'
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }))
 vi.mock('./client', async (importOriginal) => ({ ...(await importOriginal<typeof import('./client')>()), apiFetch }))
@@ -69,5 +69,12 @@ describe('손맛 분석 및 벡터화 API 계약', () => {
     apiFetch.mockResolvedValue({ vector_updated: true })
     await vectorizeSensoryProfile()
     expect(apiFetch).toHaveBeenCalledExactlyOnceWith('/api/sensory/vectorize', { method: 'POST', json: {} })
+  })
+})
+
+describe('녹음 STT 업로드 경로 계약', () => {
+  it('서명 업로드 경로에 bucket 이름을 붙여 STT로 전달한다', () => {
+    const signed = { bucket: 'uploads', path: 'owner-id/stt_audio/file.webm', token: 'unused' }
+    expect(sttAudioPath(signed)).toBe('uploads/owner-id/stt_audio/file.webm')
   })
 })

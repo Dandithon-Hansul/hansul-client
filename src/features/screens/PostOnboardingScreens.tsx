@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
 import { useAuth } from '../auth/auth-context'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail, type RecipeListItem } from '../../lib/api/recipes'
 import './post-onboarding.css'
 
 export type FeaturePage = 'record' | 'chat' | 'map' | 'profile' | 'monthly' | 'recipe' | 'cook'
@@ -118,7 +118,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           setBusy(true)
           try {
             const signed = await uploadSignedFile(file, 'stt_audio')
-            const result = await transcribe({ audio_path: signed.path })
+            const result = await transcribe({ audio_path: sttAudioPath(signed) })
             setTranscript(result.transcript)
             setDraftId(result.recipe_id)
             if (recordPhoto) {
@@ -279,7 +279,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           setBusy(true)
           try {
             const signed = await uploadSignedFile(file, 'stt_audio', draftId || undefined)
-            const result = await transcribe({ audio_path: signed.path, ...(draftId ? { recipe_id: draftId } : {}) })
+            const result = await transcribe({ audio_path: sttAudioPath(signed), ...(draftId ? { recipe_id: draftId } : {}) })
             if (result.transcript) setDraft(result.transcript)
           } catch { setScreenError('음성을 전사하지 못했어요.') }
           finally { setBusy(false) }

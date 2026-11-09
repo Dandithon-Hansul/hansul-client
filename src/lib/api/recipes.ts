@@ -258,6 +258,11 @@ export async function analyzeRecipe(recipeId: string) {
         json: { recipe_id: recipeId },
       });
 }
+/** STT expects bucket-prefixed audio_path, while upload signing returns a bucket-relative path. */
+export function sttAudioPath(upload: { bucket: string; path: string }): string {
+  return `${upload.bucket}/${upload.path}`;
+}
+
 export async function transcribe(
   body:
     | { transcript: string; recipe_id?: string }
