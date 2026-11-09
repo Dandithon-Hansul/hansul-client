@@ -1,0 +1,94 @@
+name: Frontend checks
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Tests
+        run: npm test
+      - name: Lint
+        run: npm run lint
+
+  backend-smoke:
+    name: Live backend anonymous API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check deployed backend API responses and local CORS
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+          import sys
+
+          base = "https://hansul-server.vercel.app"
+          checks = [
+              ("/api/health", "status"),
+              ("/api/home?limit=6", "top_recipes"),
+              ("/api/recipes?sort=popular&limit=6", "recipes"),
+              ("/api/search/recipes?q=jjimdak&limit=6", "recipes"),
+              ("/api/map/regions", "regions"),
+              ("/api/map/regions/47170/recipes?limit=6", "recipes"),
+          ]
+          errors = 0
+          for path, field in checks:
+              try:
+                  with urllib.request.urlopen(
+                      urllib.request.Request(base + path, headers={"Accept": "application/json"}),
+                      timeout=30
+                  ) as response:
+                      content = json.load(response)
+                      assert isinstance(content, dict), "expected JSON object"
+                      if field == "status":
+                          assert content.get(field) == "ok", f"status={content.get(field)!r}"
+                      else:
+                          assert isinstance(content.get(field), list), f"{field} not an array"
+                      print(f"PASS {path}: HTTP {response.status}; {field} valid", flush=True)
+              except Exception as exc:
+                  errors += 1
+                  print(f"FAIL {path}: {type(exc).__name__}: {exc}", flush=True)
+                  if isinstance(exc, urllib.error.HTTPError):
+                      print(f"  error body: {exc.read(500).decode('utf-8', errors='replace')}", flush=True)
+          try:
+              request = urllib.request.Request(
+                  base + "/api/health",
+                  method="OPTIONS",
+                  headers={
+                      "Origin": "http://localhost:5173",
+                      "Access-Control-Request-Method": "POST",
+                      "Access-Control-Request-Headers": "authorization,content-type"
+                  }
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  allowed = response.headers.get("Access-Control-Allow-Origin")
+                  print(f"CORS preflight: HTTP {response.status}, allow-origin={allowed!r}", flush=True)
+                  if allowed not in ("*", "http://localhost:5173"):
+                      print("WARNING: direct localhost:5173 -> backend browser requests may be blocked by CORS; configure Vite proxy for local development", flush=True)
+          except Exception as exc:
+              print(f"WARNING: CORS preflight check could not complete: {exc}", flush=True)
+          try:
+              with urllib.request.urlopen(urllib.request.Request(
+                  base + "/api/health",
+                  headers={"Origin": "http://localhost:5173", "Accept": "application/json"}
+              ), timeout=30) as response:
+                  print(f"CORS GET: HTTP {response.status}, allow-origin={response.headers.get('Access-Control-Allow-Origin')!r}", flush=True)
+          except Exception as exc:
+              print(f"WARNING: CORS GET diagnostic unavailable: {exc}", flush=True)
+          sys.exit(1 if errors else 0)
+          PY

@@ -15,11 +15,11 @@ export type RecipeDetail = {
   recipe_id: string;
   title: string;
   hero_image_url: string | null;
-  transmitter_id?: string;
+  transmitter_id: string;
   transmitter_name: string;
   transmitter_avatar_url?: string | null;
   transmitter_region?: string | null;
-  transmitter_quote: string;
+  transmitter_quote: string | null;
   context_summary: string;
   voice_message_url: string | null;
   cooking_time: number;
@@ -180,7 +180,7 @@ export async function getRecommendations(
           title: mockDetail.title,
           hero_image_url: mockDetail.hero_image_url,
           region_tag: "대구 향토음식",
-          transmitter_quote: mockDetail.transmitter_quote,
+          transmitter_quote: mockDetail.transmitter_quote ?? "",
         },
       ],
     };
@@ -210,20 +210,26 @@ export async function toggleRecipe(id: string, action: "like" | "save") {
     save_count: number;
   }>(`/api/recipes/${encodeURIComponent(id)}/${action}`, { method: "POST" });
 }
-export async function createRecipe(recipeId: string) {
+export type PublishedRecipe = {
+  recipe_id: string;
+  status: "published";
+  context_summary: string;
+  transmitter_quote: string | null;
+  voice_message_url: string | null;
+};
+
+export async function createRecipe(recipeId: string, transmitterQuote?: string): Promise<PublishedRecipe> {
+  const quote = transmitterQuote?.trim();
+  const body = { recipe_id: recipeId, ...(quote ? { transmitter_quote: quote } : {}) };
   return IS_MOCK
     ? {
         recipe_id: recipeId,
         status: "published",
         context_summary: "",
+        transmitter_quote: quote || null,
         voice_message_url: null,
       }
-    : apiFetch<{
-        recipe_id: string;
-        status: string;
-        context_summary: string;
-        voice_message_url: string | null;
-      }>("/api/recipes", { method: "POST", json: { recipe_id: recipeId } });
+    : apiFetch<PublishedRecipe>("/api/recipes", { method: "POST", json: body });
 }
 export async function generateStepImages(recipeId: string) {
   return IS_MOCK
@@ -240,18 +246,6 @@ export async function generateStepImages(recipeId: string) {
         json: { recipe_id: recipeId },
       });
 }
-export async function regenerateStepImage(
-  recipeId: string,
-  order: number,
-  hint?: string,
-) {
-  return IS_MOCK
-    ? { image_url: "" }
-    : apiFetch<{ image_url: string }>(`/api/steps/${order}/image`, {
-        method: "POST",
-        json: { recipe_id: recipeId, hint },
-      });
-}
 export async function analyzeRecipe(recipeId: string) {
   return IS_MOCK
     ? ({
@@ -264,6 +258,11 @@ export async function analyzeRecipe(recipeId: string) {
         json: { recipe_id: recipeId },
       });
 }
+/** STT expects bucket-prefixed audio_path, while upload signing returns a bucket-relative path. */
+export function sttAudioPath(upload: { bucket: string; path: string }): string {
+  return `${upload.bucket}/${upload.path}`;
+}
+
 export async function transcribe(
   body:
     | { transcript: string; recipe_id?: string }
@@ -299,7 +298,6 @@ export async function uploadSignedFile(
   file: File,
   purpose:
     | "stt_audio"
-    | "card_voice"
     | "chat_image",
   recipeId?: string,
 ) {
@@ -326,14 +324,6 @@ export async function uploadSignedFile(
   if (error)
     throw new ApiError(500, "STORAGE_ERROR", "파일을 올리지 못했어요.");
   return signed;
-}
-export async function uploadRecipeVoice(recipeId: string, audio_path: string) {
-  return IS_MOCK
-    ? { voice_message_url: "" }
-    : apiFetch<{ voice_message_url: string }>(
-        `/api/recipes/${encodeURIComponent(recipeId)}/voice`,
-        { method: "POST", json: { audio_path } },
-      );
 }
 export async function sendRecipeChat(
   body: {

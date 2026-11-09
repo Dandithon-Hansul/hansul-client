@@ -63,3 +63,12 @@ export async function searchRecipes(query: string): Promise<RecipeSearchResponse
   }
   return apiFetch<RecipeSearchResponse>(`/api/search/recipes?${params}`)
 }
+
+/**
+ * The home feed's top_recipes is the backend's calendar-month likes+saves ranking.
+ * /api/recipes?sort=popular is lifetime popularity and must not be used for this page.
+ */
+export async function getMonthlyTopRecipes(): Promise<HomeRecipe[]> {
+  const feed = await getHomeFeed(6)
+  return feed.top_recipes.slice(0, 6)
+}
