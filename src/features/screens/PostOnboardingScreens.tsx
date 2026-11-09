@@ -301,10 +301,10 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           <h1>{recipe.title}</h1>
         </section>
         <div className="recipe-detail-content">
-          <div className="recipe-author">
+          <button className="recipe-author" type="button" onClick={() => recipe.transmitter_id && navigate(`/users/${encodeURIComponent(recipe.transmitter_id)}`)} disabled={!recipe.transmitter_id} aria-label={`${recipe.transmitter_name} 전승자 프로필 보기`}>
             {recipe.transmitter_avatar_url ? <img src={recipe.transmitter_avatar_url} alt="" /> : <span className="recipe-author-fallback" aria-hidden="true">{recipe.transmitter_name.slice(0, 1)}</span>}
             <div><strong>{recipe.transmitter_name} 전승자</strong>{recipe.transmitter_region && <small>{recipe.transmitter_region}</small>}</div>
-          </div>
+          </button>
           <div className="recipe-quote-card">
             <button className="recipe-quote-play" type="button" onClick={() => void toggleQuoteAudio()} disabled={!recipe.voice_message_url} aria-label={quotePlaying ? '한마디 음성 일시정지' : '한마디 음성 재생'}>
               <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5.5 6.5h7a4 4 0 0 1 4 4v15a4 4 0 0 0-4-3.5h-7zM26.5 6.5h-6a4 4 0 0 0-4 4v15a4 4 0 0 1 4-3.5h6z"/><rect x="22" y="12" width="3" height="6" rx="1.5"/><path d="M20.5 16v1a3 3 0 0 0 6 0v-1m-3 4v2m-2 0h4"/></svg>

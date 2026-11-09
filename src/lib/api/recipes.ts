@@ -15,6 +15,7 @@ export type RecipeDetail = {
   recipe_id: string;
   title: string;
   hero_image_url: string | null;
+  transmitter_id?: string;
   transmitter_name: string;
   transmitter_avatar_url?: string | null;
   transmitter_region?: string | null;
@@ -85,6 +86,7 @@ const mockDetail: RecipeDetail = {
   recipe_id: "r-daegu-yukgaejang",
   title: "대구식 육개장",
   hero_image_url: "/images/daegu-yukgaejang.png",
+  transmitter_id: "u-kim-hansul",
   transmitter_name: "박순덕",
   transmitter_quote: "대파를 넉넉히 넣어 끓여요.",
   context_summary:

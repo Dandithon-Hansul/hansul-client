@@ -74,7 +74,8 @@
   .recipe-hero h1 { @apply absolute bottom-5 left-[22px] m-0 font-serif text-[23px] font-bold text-white; }
   .recipe-detail-content { @apply px-[18px] py-[18px] pb-10; }
   .recipe-detail-content h2 { @apply text-[27px]; }
-  .recipe-author { @apply flex items-center gap-3; }
+    .recipe-author { @apply flex items-center gap-3 border-0 bg-transparent p-0 text-left; cursor: pointer; }
+    .recipe-author:disabled { cursor: default; }
   .recipe-author>img,.recipe-author-fallback { @apply h-10 w-10 shrink-0 rounded-full object-cover; }
   .recipe-author-fallback { @apply grid place-items-center bg-[#d9d3c8] font-serif text-base text-[#605c55]; }
   .recipe-author>div { @apply flex flex-col gap-1; }
