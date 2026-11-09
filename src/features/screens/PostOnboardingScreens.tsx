@@ -5,7 +5,7 @@ import { IS_MOCK } from '../../lib/env'
 import { createRecordingFile } from '../../lib/recordingFile'
 import { ApiError } from '../../lib/api/client'
 import { useAuth } from '../auth/auth-context'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, vectorizeSensoryProfile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
 import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
 import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
 import { failedStepImageOrders, mergeStepImages } from './stepImageGeneration'
@@ -17,6 +17,18 @@ type Props = { page: FeaturePage; name: string; region: string; favoriteFoods: s
 
 function PageHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return <header className="feature-header"><button type="button" onClick={onBack} aria-label="뒤로">‹</button><h1>{title}</h1><span /></header>
+}
+
+/** Three visual stages: before recording, recording/finishing, conversation. */
+function JourneyProgress({ stage }: { stage: 1 | 2 | 3 }) {
+  const labels = ['녹음 준비', '녹음 및 정리', '음식 이야기']
+  return <nav className="journey-progress" aria-label="음식 이야기 진행 단계">
+    {labels.map((label, index) => <span
+      className={index + 1 === stage ? 'is-current' : index + 1 < stage ? 'is-complete' : ''}
+      key={label}
+      aria-current={index + 1 === stage ? 'step' : undefined}
+    ><span className="journey-step-text">{label}</span></span>)}
+  </nav>
 }
 
 function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }: Props) {
@@ -42,6 +54,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const [monthlyActionBusy, setMonthlyActionBusy] = useState<string | null>(null)
   const [monthlyLoading, setMonthlyLoading] = useState(false)
   const [screenError, setScreenError] = useState('')
+  const [retryChatMessage, setRetryChatMessage] = useState('')
   const [stepImageStatus, setStepImageStatus] = useState<{
     recipeId: string
     generating: boolean
@@ -320,12 +333,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       { from: 'ai', text: CHAT_PENDING_TEXT, responseId },
     ])
     setSelectedSuggestion(message)
+    setRetryChatMessage('')
+    setScreenError('')
     setDraft('')
     stopChatAudio()
     setBusy(true)
     try {
       let answerText = ''
       let hasAudioSegments = false
+      let hadStreamError = false
       await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: true }, (event) => {
         if (event.event === 'chunk' && typeof event.data.text === 'string') {
           answerText += event.data.text
@@ -338,8 +354,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         if (event.event === 'done' && !hasAudioSegments && typeof event.data.audio_url === 'string') {
           enqueueChatAudio(event.data.audio_url)
         }
-        if (event.event === 'error') setScreenError(String(event.data.message ?? '채팅 처리 중 오류가 발생했어요.'))
+        if (event.event === 'error') hadStreamError = true
       })
+      if (hadStreamError && !answerText) throw new Error('CHAT_STREAM_FAILED')
       if (!answerText) setMessages((current) => current.filter((item) => item.responseId !== responseId))
       if (analysis?.questions.length) {
         const nextAnalysis = await analyzeRecipe(recipe_id)
@@ -354,7 +371,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       setChatImagePath(undefined)
     } catch {
       setMessages((current) => current.filter((item) => item.responseId !== responseId || item.text !== CHAT_PENDING_TEXT))
-      setScreenError('메시지를 보내지 못했어요.')
+      setRetryChatMessage(message)
     }
     finally { setBusy(false) }
   }
@@ -461,7 +478,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   if (page === 'record') return (
     <main className="feature-page">
-      <PageHeader title="AI 음성 기록" onBack={() => onNavigate('home')} />
+      <JourneyProgress stage={recording || recordingSeconds > 0 || busy || Boolean(draftId) ? 2 : 1} />
+      <button className="journey-back" type="button" onClick={() => onNavigate('home')} aria-label="홈으로 돌아가기">‹</button>
       <div className="record-view">
         <p className="feature-kicker">우리 집 손맛 기록</p>
         <h2>어떤 음식의 이야기를<br />남겨볼까요?</h2>
@@ -480,21 +498,33 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
 
   if (page === 'chat') return (
     <main className="feature-page chat-page">
-      <PageHeader title="음식 이야기" onBack={() => onNavigate('record')} />
-      <div className="chat-context"><span>AI 음성 기록</span><h2>어떤 음식의 이야기를<br />남겨볼까요?</h2></div>
+      <JourneyProgress stage={3} />
+      <button className="journey-back" type="button" onClick={() => onNavigate('record')} aria-label="녹음 화면으로 돌아가기">‹</button>
       <div className="chat-messages" aria-live="polite">
-        {messages.map((message, index) => <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>{message.from === 'ai' && <img src="/logo.svg" alt="한술" />}<p>{message.text}</p></div>)}
+        {messages.map((message, index) => {
+          const canChooseAnswer = quoteStep === 'questions' && message.from === 'ai' && index === messages.length - 1
+          const options = canChooseAnswer ? (analysis?.questions[0]?.options ?? []) : []
+          return <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>
+            {message.from === 'ai' && <img className="chat-bot-avatar" src="/images/hansul-mark-alt.png" alt="" />}
+            <div className="chat-bubble-body">
+              {message.from === 'ai' && <span className="chat-bot-name">한술봇</span>}
+              <p>{message.text}</p>
+              {options.length > 0 && <div className="answer-options" aria-label="추천 답변">
+                {options.map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}
+              </div>}
+            </div>
+          </div>
+        })}
       </div>
-      {screenError && <p role="alert">{screenError}</p>}
+      {screenError && <p className="chat-notice" role="alert">{screenError}</p>}
+      {retryChatMessage && <button className="chat-retry" type="button" disabled={busy} onClick={() => void sendChatMessage(retryChatMessage)}>다시 보내기</button>}
       {chatAudioNeedsTap && <button type="button" className="chat-audio-retry" onClick={resumeChatAudio}>AI 답변 음성 재생하기</button>}
-      {quoteStep === 'questions' && <div className="answer-options" aria-label="추천 답변">{(analysis?.questions[0]?.options ?? []).map((suggestion) => <button className={selectedSuggestion === suggestion ? 'is-selected' : ''} type="button" key={suggestion} onClick={() => void sendChatMessage(suggestion)} disabled={busy}>{suggestion}</button>)}</div>}
       {(quoteStep === 'questions' || quoteStep === 'input') && <form className="chat-compose" onSubmit={sendMessage}><button className={`chat-mic ${chatVoiceRecording ? 'is-recording' : ''}`} type="button" aria-label={chatVoiceRecording ? '음성 입력 마치기' : '음성 입력'} onClick={() => void toggleChatVoice()} disabled={busy}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg></button><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={quoteStep === 'input' ? '전하고 싶은 한마디 (선택)' : '메시지를 입력해 주세요'} aria-label={quoteStep === 'input' ? '전승자 한마디' : '메시지'} /><button className="chat-send" type="submit" aria-label={quoteStep === 'input' ? '한마디 확정' : '전송'} disabled={busy || !draft.trim()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 4 18 8-18 8 3-8-3-8Z"/><path d="M6 12h15"/></svg></button></form>}
       {quoteStep === 'confirmed' && <div className="quote-review"><p>확정한 한마디: “{transmitterQuote}”</p><button type="button" disabled={busy} onClick={() => { setDraft(transmitterQuote); setQuoteStep('input') }}>한마디 수정</button></div>}
       {quoteStep === 'skipped' && <p className="quote-review">한마디 없이 레시피를 발행할게요.</p>}
       {quoteStep === 'input' && <button className="quote-skip" type="button" disabled={busy || chatVoiceRecording} onClick={() => { setDraft(''); setTransmitterQuote(''); setQuoteStep('skipped') }}>한마디 건너뛰기</button>}
       <button className="feature-primary chat-next" type="button" disabled={busy || !draftId || quoteStep === 'input'} onClick={() => void analyzeAndPublish()}>{busy ? '정리하고 있어요…' : quoteStep === 'questions' ? '레시피 만들러 가기 →' : quoteStep === 'input' ? '한마디를 입력하거나 건너뛰어 주세요' : '레시피 발행하기 →'}</button>
-      {analysis && <p className="feature-muted">재료 {analysis.structured.ingredients.length}개 · 조리 단계 {analysis.structured.steps.length}개를 분석했어요.</p>}
-      <button type="button" disabled={busy} onClick={() => { setBusy(true); void vectorizeSensoryProfile().then(() => setScreenError('손맛 프로파일을 업데이트했어요.')).catch(() => setScreenError('감각 기록이 더 쌓인 뒤 다시 시도해주세요.')).finally(() => setBusy(false)) }}>손맛 프로파일 업데이트</button>
+      <span className="journey-step-text" aria-live="polite">{analysis ? '레시피 정리 정보를 준비했어요' : '음식 이야기를 나누는 중이에요'}</span>
     </main>
   )
 
