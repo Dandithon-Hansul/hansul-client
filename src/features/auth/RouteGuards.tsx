@@ -38,13 +38,14 @@ function ProfileCheckError({ error, onRetry }: { error: unknown; onRetry: () => 
 /**
  * 로그인해야 들어갈 수 있는 화면들을 감쌈.
  * 비로그인이면 /login 으로 보내면서 원래 가려던 주소를 state.from 에 기억
+ * (단, 사용자가 직접 로그아웃한 경우엔 기억하지 않음 → 다시 로그인하면 홈)
  */
 export function RequireAuth() {
-  const { status } = useAuth()
+  const { status, signedOutByUser } = useAuth()
   const location = useLocation()
   if (status === 'loading') return null
   if (status === 'anonymous') {
-    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+    return <Navigate to="/login" replace state={signedOutByUser ? null : { from: location.pathname + location.search }} />
   }
   return <Outlet />
 }
