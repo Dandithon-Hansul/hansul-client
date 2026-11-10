@@ -1,7 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api/client'
-import { analyzeRecipe, transcribe, uploadSignedFile } from '../../lib/api/recipes'
+import { analyzeRecipe, transcribe, transcribeChatAudio, uploadSignedFile } from '../../lib/api/recipes'
 import { currentPath, loginAsDemo, renderApp } from '../../test/renderApp'
 
 vi.mock('../../lib/api/recipes', async (importOriginal) => {
@@ -10,6 +10,7 @@ vi.mock('../../lib/api/recipes', async (importOriginal) => {
     ...actual,
     uploadSignedFile: vi.fn(),
     transcribe: vi.fn(),
+    transcribeChatAudio: vi.fn(),
     analyzeRecipe: vi.fn(),
   }
 })
@@ -54,6 +55,8 @@ beforeEach(() => {
   })
   vi.mocked(uploadSignedFile).mockReset()
   vi.mocked(transcribe).mockReset()
+  vi.mocked(transcribeChatAudio).mockReset()
+  vi.mocked(transcribeChatAudio).mockResolvedValue({ transcript: '국물을 자작하게 졸여요' })
   vi.mocked(analyzeRecipe).mockReset()
   vi.mocked(analyzeRecipe).mockResolvedValue(analysis)
   vi.mocked(uploadSignedFile).mockResolvedValue({ bucket: 'uploads', path: 'owner/stt_audio/test.webm', token: 'signed' })
@@ -93,7 +96,7 @@ describe('녹음 직후 AI 분석 실패 복구', () => {
     expect(vi.mocked(analyzeRecipe)).toHaveBeenCalledTimes(2)
     expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
   })
-  it('채팅 마이크 전사는 최초 초안의 recipe_id를 전달하지 않는다', async () => {
+  it('채팅 마이크 전사는 레시피 초안 대신 전사 전용 API만 호출한다', async () => {
     loginAsDemo()
     const user = renderApp('/record')
 
@@ -104,10 +107,9 @@ describe('녹음 직후 AI 분석 실패 복구', () => {
 
     await user.click(screen.getByRole('button', { name: '음성 입력' }))
     await user.click(screen.getByRole('button', { name: '음성 입력 마치기' }))
-    await waitFor(() => expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(2))
-    expect(vi.mocked(transcribe)).toHaveBeenNthCalledWith(2, {
-      audio_path: 'uploads/owner/stt_audio/test.webm',
-    })
+    await waitFor(() => expect(vi.mocked(transcribeChatAudio)).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(transcribeChatAudio)).toHaveBeenCalledWith('uploads/owner/stt_audio/test.webm')
+    expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(uploadSignedFile)).toHaveBeenNthCalledWith(2, expect.any(File), 'stt_audio')
     expect(screen.getByRole('textbox', { name: '메시지' })).toHaveValue('국물을 자작하게 졸여요')
   })

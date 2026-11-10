@@ -8,7 +8,7 @@ import { createRecordingFile } from '../../lib/recordingFile'
 import { ApiError } from '../../lib/api/client'
 import { flowErrorMessage } from './recipeFlowError'
 import { useAuth } from '../auth/auth-context'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, transcribeChatAudio, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
 import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
 import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
 import { failedStepImageOrders, mergeStepImages } from './stepImageGeneration'
@@ -435,10 +435,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           setBusy(true)
           try {
             const file = createRecordingFile(chunks, recorder.mimeType, 'chat-recording')
-            // Never pass the original recipe_id to STT: it would replace the first narration.
-            // Current STT contract creates an unused draft for this standalone voice transcription.
+            // Chat audio is transcribed without changing or creating a recipe draft.
             const signed = await uploadSignedFile(file, 'stt_audio')
-            const result = await transcribe({ audio_path: sttAudioPath(signed) })
+            const result = await transcribeChatAudio(sttAudioPath(signed))
             if (result.transcript) setDraft(result.transcript)
           } catch (error) {
             setScreenError(error instanceof ApiError && error.status === 415

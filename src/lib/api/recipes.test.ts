@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sttAudioPath, vectorizeSensoryProfile } from './recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, getRecipes, sttAudioPath, transcribeChatAudio, vectorizeSensoryProfile } from './recipes'
 
 const { apiFetch } = vi.hoisted(() => ({ apiFetch: vi.fn() }))
 vi.mock('./client', async (importOriginal) => ({ ...(await importOriginal<typeof import('./client')>()), apiFetch }))
@@ -69,6 +69,21 @@ describe('손맛 분석 및 벡터화 API 계약', () => {
     apiFetch.mockResolvedValue({ vector_updated: true })
     await vectorizeSensoryProfile()
     expect(apiFetch).toHaveBeenCalledExactlyOnceWith('/api/sensory/vectorize', { method: 'POST', json: {} })
+  })
+})
+
+describe('채팅 음성 답변 STT 계약', () => {
+  it('transcribe_only를 사용해 원본 수정이나 새 초안 생성 없이 전사만 요청한다', async () => {
+    apiFetch.mockResolvedValue({ transcript: '재료 절반까지요' })
+    const response = await transcribeChatAudio('uploads/user-id/stt_audio/reply.webm')
+    expect(apiFetch).toHaveBeenCalledExactlyOnceWith('/api/stt', {
+      method: 'POST',
+      json: {
+        audio_path: 'uploads/user-id/stt_audio/reply.webm',
+        transcribe_only: true,
+      },
+    })
+    expect(response).toEqual({ transcript: '재료 절반까지요' })
   })
 })
 
