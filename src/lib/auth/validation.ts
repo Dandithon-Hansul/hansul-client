@@ -43,7 +43,17 @@ export function toKoreanAuthMessage(error: { code?: string; message?: string; st
   if (code === 'user_already_exists' || message.includes('already registered')) return '이미 사용 중인 아이디예요.'
   if (code === 'weak_password' || message.includes('Password should be')) return `비밀번호는 ${PASSWORD_RULE}으로 입력해주세요.`
   if (code === 'email_address_invalid') return '사용할 수 없는 아이디예요.'
+  // Supabase 'Confirm email' 이 켜져 있을 때 가입한 계정 — 설정을 꺼도 이 계정은 확인 전 상태로 남아 로그인이 막힘
+  if (code === 'email_not_confirmed' || message.includes('Email not confirmed')) {
+    return "가입 확인이 끝나지 않은 계정이에요. 'Confirm email' 이 켜져 있을 때 만든 계정이라 새 아이디로 가입하거나, 백엔드에 계정 확인(Confirm user)을 요청해주세요."
+  }
+  // 배포 환경 변수의 Supabase 키가 비었거나 잘못됨 (따옴표째 넣음, 다른 프로젝트 키 등)
+  if (message.includes('Invalid API key') || message.includes('No API key')) {
+    return '앱의 Supabase 키가 올바르지 않아요. 배포 환경 변수 VITE_SUPABASE_ANON_KEY 를 확인해주세요.'
+  }
   if (code === 'over_request_rate_limit' || error.status === 429) return '요청이 많아요. 잠시 후 다시 시도해주세요.'
   if (error.status === 0 || message.includes('fetch')) return '서버에 연결하지 못했어요. 인터넷 연결이나 Supabase 주소를 확인해주세요.'
-  return '문제가 생겼어요. 잠시 후 다시 시도해주세요.'
+  // 원인을 알 수 있게 코드를 같이 보여줌 (예: 문제가 생겼어요… (500))
+  const detail = code || (error.status ? String(error.status) : '')
+  return `문제가 생겼어요. 잠시 후 다시 시도해주세요.${detail ? ` (${detail})` : ''}`
 }

@@ -165,7 +165,12 @@ export async function getUserProfile(id: string): Promise<PublicProfile> {
     region: normalizeRegion(raw.region),
     region_text: raw.region ?? null,
     bio: raw.bio ?? null,
-    stats: { transmitted_recipes: raw.recipe_count ?? 0, likes_received: raw.received_like_count ?? 0 },
+    stats: {
+      transmitted_recipes: raw.recipe_count ?? 0,
+      saved_recipes: raw.saved_recipe_count ?? raw.saved_recipes?.length ?? 0,
+      likes_received: raw.received_like_count ?? 0,
+    },
     recipes: raw.recipes ?? [],
+    saved_recipes: (raw.saved_recipes ?? []).map(({ recipe_id, title, hero_image_url }) => ({ recipe_id, title, hero_image_url })),
   }
 }

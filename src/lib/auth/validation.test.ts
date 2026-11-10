@@ -40,6 +40,15 @@ describe('toKoreanAuthMessage', () => {
     expect(toKoreanAuthMessage({ code: 'invalid_credentials' })).toBe('아이디 또는 비밀번호가 올바르지 않아요.')
     expect(toKoreanAuthMessage({ message: 'User already registered' })).toBe('이미 사용 중인 아이디예요.')
     expect(toKoreanAuthMessage({ status: 0, message: 'Failed to fetch' })).toContain('서버에 연결하지 못했어요')
-    expect(toKoreanAuthMessage({ status: 500 })).toBe('문제가 생겼어요. 잠시 후 다시 시도해주세요.')
+    expect(toKoreanAuthMessage({ status: 500 })).toBe('문제가 생겼어요. 잠시 후 다시 시도해주세요. (500)')
+    expect(toKoreanAuthMessage({})).toBe('문제가 생겼어요. 잠시 후 다시 시도해주세요.')
+  })
+
+  it("'Confirm email' 이 켜져 있을 때 만든(확인 안 된) 계정은 그 이유를 알려준다", () => {
+    expect(toKoreanAuthMessage({ code: 'email_not_confirmed', status: 400, message: 'Email not confirmed' })).toContain('가입 확인이 끝나지 않은 계정')
+  })
+
+  it('Supabase 키가 잘못되면 배포 환경 변수를 확인하라고 알려준다', () => {
+    expect(toKoreanAuthMessage({ status: 401, message: 'Invalid API key' })).toContain('VITE_SUPABASE_ANON_KEY')
   })
 })

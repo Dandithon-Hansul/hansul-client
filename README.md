@@ -121,6 +121,19 @@ npm run dev -- --host 0.0.0.0
 
 **실제 Supabase** (`VITE_USE_MOCK=false`): Supabase 대시보드 › Authentication › Sign In / Providers › Email 에서 **Confirm email 을 꺼야** 가입 즉시 로그인됩니다 (아이디를 가짜 이메일로 바꿔 쓰기 때문). 가입한 사용자는 Authentication › Users 에 `아이디@hansul.app` 으로 보입니다. 가입·로그인 직후 `GET /api/profiles/me` 가 404 면 온보딩, 그 밖의 이유로 실패하면 '내 정보를 불러오지 못했어요' 화면에 원인 코드가 나옵니다 — `INVALID_RESPONSE · 200` 은 백엔드 주소 미설정(`VITE_API_PROXY_TARGET`/`VITE_API_BASE_URL`), `NETWORK_ERROR` 는 서버 연결·CORS, `UNAUTHORIZED · 401` 은 프론트와 백엔드의 Supabase 프로젝트가 다른 경우.
 
+### 배포 사이트에서 로그인이 안 될 때
+
+화면에 나오는 문구로 원인을 찾습니다.
+
+| 화면 문구 | 원인 | 해결 |
+| --- | --- | --- |
+| `VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY 가 없어요` | Vercel 환경 변수가 없음 (이름이 `VITE_` 로 시작하지 않거나, Production 환경에 안 넣음, 넣고 Redeploy 안 함) | Vercel › Settings › Environment Variables 에 넣고 **Redeploy** |
+| `앱의 Supabase 키가 올바르지 않아요` | 키 값이 틀림 (다른 프로젝트 키, 잘림) | 백엔드가 준 `sb_publishable_` 키로 다시 넣고 Redeploy |
+| `가입 확인이 끝나지 않은 계정이에요` | Confirm email 이 켜져 있을 때 만든 계정 (설정을 꺼도 그대로 남음) | 새 아이디로 가입하거나, 백엔드가 SQL Editor 에서 확인 처리: `update auth.users set email_confirmed_at = now() where email = '아이디@hansul.app';` |
+| `아이디 또는 비밀번호가 올바르지 않아요` (로컬에선 되는 계정) | 배포와 로컬의 Supabase 프로젝트 또는 `VITE_AUTH_EMAIL_DOMAIN` 이 다름, 또는 `VITE_USE_MOCK=true` 로 배포됨 | 세 값을 로컬 `.env.local` 과 똑같이 맞추고 Redeploy |
+| 로그인 후 `내 정보를 불러오지 못했어요` + `INVALID_RESPONSE · 200` | `/api` 가 백엔드로 안 넘어감 (예전 배포) | `vercel.json` 의 `/api/:path*` 규칙이 들어간 main 으로 다시 배포 |
+| 로그인 후 `내 정보를 불러오지 못했어요` + `UNAUTHORIZED · 401` | 프론트와 백엔드가 서로 다른 Supabase 프로젝트를 씀 | 백엔드 서버 환경 변수의 Supabase 주소와 같은 프로젝트로 맞춤 |
+
 ### 백엔드에 요청할 것 (프로필)
 
 - ⚠️ 소개(`bio`): DB 칸은 있고 다른 사람 프로필 응답에도 나오지만, `GET /api/profiles/me` 응답에 없고 `PATCH /api/profiles/me` 가 `bio` 를 안 받음(엄격 검사라 보내면 실패) — 둘 다 추가 요청 중. 프론트는 소개를 바꿨을 때만 `bio` 를 보내서 이름·사진·지역 저장에는 영향 없음
