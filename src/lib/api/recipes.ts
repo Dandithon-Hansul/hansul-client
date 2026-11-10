@@ -279,6 +279,15 @@ export async function transcribe(
         { method: "POST", json: body },
       );
 }
+/** Chat voice answers must not create a new recipe draft or overwrite the narration. */
+export async function transcribeChatAudio(audioPath: string): Promise<{ transcript: string }> {
+  if (IS_MOCK) return { transcript: "재료 절반까지요" };
+  return apiFetch<{ transcript: string }>("/api/stt", {
+    method: "POST",
+    json: { audio_path: audioPath, transcribe_only: true },
+  });
+}
+
 export async function vectorizeSensoryProfile() {
   return IS_MOCK
     ? {

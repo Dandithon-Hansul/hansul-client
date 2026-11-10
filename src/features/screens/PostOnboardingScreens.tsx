@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { useGoBack } from '../../app/useGoBack'
 import { cookPath, recipePath } from '../../app/paths'
 import { IS_MOCK } from '../../lib/env'
 import RecipePhoto from '../../components/RecipePhoto'
@@ -7,7 +8,7 @@ import { createRecordingFile } from '../../lib/recordingFile'
 import { ApiError } from '../../lib/api/client'
 import { flowErrorMessage } from './recipeFlowError'
 import { useAuth } from '../auth/auth-context'
-import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
+import { analyzeRecipe, createRecipe, generateStepImages, getRecipe, sendRecipeChat, toggleRecipe, transcribe, transcribeChatAudio, sttAudioPath, uploadSignedFile, type AnalysisResult, type RecipeDetail } from '../../lib/api/recipes'
 import { getMonthlyTopRecipes, type HomeRecipe } from '../../lib/api/home'
 import { appendChatStreamChunk, CHAT_PENDING_TEXT, type ChatMessage } from './chatStream'
 import { failedStepImageOrders, mergeStepImages } from './stepImageGeneration'
@@ -35,10 +36,12 @@ function JourneyProgress({ stage }: { stage: 1 | 2 | 3 }) {
 
 function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }: Props) {
   const navigate = useNavigate()
+  const goBack = useGoBack('/')
   const { session } = useAuth()
   const [recording, setRecording] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [recordPhoto, setRecordPhoto] = useState<File | null>(null)
+  const recordPhotoRef = useRef<File | null>(null)
   const [draft, setDraft] = useState('')
   const [chatVoiceRecording, setChatVoiceRecording] = useState(false)
   const [selectedSuggestion, setSelectedSuggestion] = useState('')
@@ -80,6 +83,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   const imageGenerationRequested = useRef(new Set<string>())
   const imageGenerationInFlight = useRef(new Set<string>())
   const monthlyActionInFlight = useRef(new Set<string>())
+  const recipeReactionInFlight = useRef(new Set<'like' | 'save'>())
+  const [recipeReactionBusy, setRecipeReactionBusy] = useState({ like: false, save: false })
   // 예시 레시피(대구식 육개장)는 mock 에서만. 실제 서버에선 이 id 가 없어서 400
   const recipeId = searchParams.get('id') || draftId || (IS_MOCK ? 'r-daegu-yukgaejang' : '')
   useEffect(() => {
@@ -137,6 +142,29 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     } finally {
       monthlyActionInFlight.current.delete(id)
       setMonthlyActionBusy(null)
+    }
+  }
+
+  async function updateRecipeReaction(id: string, action: 'like' | 'save') {
+    if (recipeReactionInFlight.current.has(action)) return
+    recipeReactionInFlight.current.add(action)
+    setRecipeReactionBusy((current) => ({ ...current, [action]: true }))
+    setScreenError('')
+    try {
+      const result = await toggleRecipe(id, action)
+      setRecipe((current) => {
+        if (!current || current.recipe_id !== id) return current
+        return action === 'like'
+          ? { ...current, is_liked: result.liked, like_count: result.like_count }
+          : { ...current, is_saved: result.saved, save_count: result.save_count }
+      })
+    } catch {
+      setScreenError(action === 'like'
+        ? '좋아요를 변경하지 못했어요. 다시 시도해 주세요.'
+        : '스크랩을 변경하지 못했어요. 다시 시도해 주세요.')
+    } finally {
+      recipeReactionInFlight.current.delete(action)
+      setRecipeReactionBusy((current) => ({ ...current, [action]: false }))
     }
   }
 
@@ -221,12 +249,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
             const signed = await uploadSignedFile(file, 'stt_audio')
             const result = await transcribe({ audio_path: sttAudioPath(signed) })
             setDraftId(result.recipe_id)
-            if (recordPhoto) {
-              const photo = await uploadSignedFile(recordPhoto, 'chat_image', result.recipe_id)
-              setChatImagePath(photo.path)
-              setRecordPhoto(null)
-            }
-            // The transcript stays on the server as a draft; continue to the conversation automatically.
+            // The transcript stays on the server as a draft; photo selection and analysis
+            // are handled below, including photos chosen after recording started.
             await continueToChat(result.recipe_id)
           } catch (error) {
             setRecordError(error instanceof ApiError && error.status === 415
@@ -266,6 +290,18 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     setRecordError('')
     setScreenError('')
     try {
+      // Read the latest selected photo, not the stale value captured on recorder.start().
+      if (recordPhotoRef.current) {
+        try {
+          const photo = await uploadSignedFile(recordPhotoRef.current, 'chat_image', currentDraftId)
+          setChatImagePath(photo.path)
+          recordPhotoRef.current = null
+          setRecordPhoto(null)
+        } catch {
+          setRecordError('음식 사진을 올리지 못했어요. 사진을 다시 선택하거나 다시 시도해 주세요. 녹음은 저장돼 있어요.')
+          return
+        }
+      }
       const result = await analyzeRecipe(currentDraftId)
       setAnalysis(result)
       setQuoteStep('questions')
@@ -399,8 +435,9 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
           setBusy(true)
           try {
             const file = createRecordingFile(chunks, recorder.mimeType, 'chat-recording')
-            const signed = await uploadSignedFile(file, 'stt_audio', draftId || undefined)
-            const result = await transcribe({ audio_path: sttAudioPath(signed), ...(draftId ? { recipe_id: draftId } : {}) })
+            // Chat audio is transcribed without changing or creating a recipe draft.
+            const signed = await uploadSignedFile(file, 'stt_audio')
+            const result = await transcribeChatAudio(sttAudioPath(signed))
             if (result.transcript) setDraft(result.transcript)
           } catch (error) {
             setScreenError(error instanceof ApiError && error.status === 415
@@ -506,7 +543,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         <p className="record-status">{recording ? '버튼을 누르면 녹음이 일시정지됩니다' : mediaRecorder.current?.state === 'paused' ? '버튼을 다시 누르면 녹음이 이어집니다' : busy ? '음성을 전사하고 분석하고 있어요…' : draftId ? analysis ? '음식 이야기를 이어갈 수 있어요' : '음성은 저장됐어요. AI 분석을 다시 시도해 주세요' : '버튼을 눌러 이야기를 시작하세요'}<span>{String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}</span></p>
         {recordError && <p role="alert">{recordError}</p>}
         <div className="record-guidance"><small>이렇게 시작해 보세요</small><p>“오늘은 우리 집에서 40년 동안 만들어 온<br />소고기국 레시피를 알려줄게요.”</p></div>
-        <label className={`photo-upload record-photo-button ${recordPhoto ? 'is-active' : ''}`}>{recordPhoto ? '사진이 추가됐어요' : '음식 사진 먼저 추가하기'}<input type="file" accept="image/*" onChange={(event) => setRecordPhoto(event.target.files?.[0] ?? null)} /></label>
+        <label className={`photo-upload record-photo-button ${recordPhoto || chatImagePath ? 'is-active' : ''}`}>{recordPhoto || chatImagePath ? '사진이 추가됐어요' : '음식 사진 먼저 추가하기'}<input type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0] ?? null; recordPhotoRef.current = file; setRecordPhoto(file) }} /></label>
         <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else if (analysis) onNavigate('chat'); else void continueToChat() }}>{busy ? '레시피 이야기를 정리하고 있어요…' : draftId ? analysis ? '음식 이야기로 돌아가기' : 'AI 분석 다시 시도하기' : '기록 마무리 하기'}</button>
       </div>
     </main>
@@ -562,15 +599,15 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         <section className="recipe-hero">
           <RecipePhoto className="recipe-detail-image" src={recipe.hero_image_url} title={recipe.title} />
           <span className="recipe-hero-gradient" />
-          <button className="recipe-back" type="button" onClick={() => onNavigate('home')} aria-label="뒤로가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
+          <button className="recipe-back" type="button" onClick={goBack} aria-label="뒤로가기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg></button>
           <div className="recipe-hero-actions">
             <div className="recipe-hero-action">
-              <button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'like').then((value) => setRecipe({ ...recipe, is_liked: value.liked, like_count: value.like_count }))} aria-label={recipe.is_liked ? '좋아요 취소' : '좋아요'} aria-pressed={recipe.is_liked}>
+              <button type="button" onClick={() => void updateRecipeReaction(recipe.recipe_id, 'like')} disabled={recipeReactionBusy.like} aria-label={recipe.is_liked ? '좋아요 취소' : '좋아요'} aria-pressed={recipe.is_liked}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 4.1-8.8 10-8.8 10S3.2 12.8 3.2 8.7a4.5 4.5 0 0 1 8.8-1.3 4.5 4.5 0 0 1 8.8 1.3Z" /></svg>
               </button><span>{recipe.like_count}</span>
             </div>
             <div className="recipe-hero-action">
-              <button type="button" onClick={() => void toggleRecipe(recipe.recipe_id, 'save').then((value) => setRecipe({ ...recipe, is_saved: value.saved, save_count: value.save_count }))} aria-label={recipe.is_saved ? '스크랩 취소' : '스크랩'} aria-pressed={recipe.is_saved}>
+              <button type="button" onClick={() => void updateRecipeReaction(recipe.recipe_id, 'save')} disabled={recipeReactionBusy.save} aria-label={recipe.is_saved ? '스크랩 취소' : '스크랩'} aria-pressed={recipe.is_saved}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17l-6-4-6 4z" /></svg>
               </button><span>{recipe.save_count}</span>
             </div>
