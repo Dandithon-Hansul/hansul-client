@@ -263,6 +263,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     const currentDraftId = completedDraftId || draftId
     if (!currentDraftId) return
     setBusy(true)
+    setRecordError('')
     setScreenError('')
     try {
       const result = await analyzeRecipe(currentDraftId)
@@ -275,12 +276,14 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         setMessages([])
         beginQuoteStep()
       }
+      onNavigate('chat')
     } catch (error) {
-      setMessages([{ from: 'ai', text: '들려주신 음식 이야기를 조금 더 정리해 볼게요.' }])
-      setScreenError(flowErrorMessage(error, 'analysis'))
+      // Keep the recorded draft and stay on the recording screen until analysis succeeds.
+      // A generic chat without the first analyzed question confuses transmitters.
+      setAnalysis(null)
+      setRecordError(`${flowErrorMessage(error, 'analysis')} 녹음은 저장됐어요. AI 분석을 다시 시도해 주세요.`)
     } finally {
       setBusy(false)
-      onNavigate('chat')
     }
   }
 
@@ -500,11 +503,11 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         <button className={`record-orb ${recording ? 'is-recording' : ''}`} type="button" onClick={() => void toggleRecording()} aria-label={recording ? '녹음 일시정지' : mediaRecorder.current?.state === 'paused' ? '녹음 다시 시작' : '녹음 시작'} disabled={busy}>
           {recording ? <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M7 23v-6m6 12V12m6 18V9m6 21V13m6 12v-7"/><path d="m33 4 1.4 3.2L38 9l-3.6 1.5L33 14l-1.5-3.5L28 9l3.5-1.8L33 4Z"/></svg> : <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8"/></svg>}
         </button>
-        <p className="record-status">{recording ? '버튼을 누르면 녹음이 일시정지됩니다' : mediaRecorder.current?.state === 'paused' ? '버튼을 다시 누르면 녹음이 이어집니다' : busy ? '음성을 전사하고 있어요…' : '버튼을 눌러 이야기를 시작하세요'}<span>{String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}</span></p>
+        <p className="record-status">{recording ? '버튼을 누르면 녹음이 일시정지됩니다' : mediaRecorder.current?.state === 'paused' ? '버튼을 다시 누르면 녹음이 이어집니다' : busy ? '음성을 전사하고 분석하고 있어요…' : draftId ? analysis ? '음식 이야기를 이어갈 수 있어요' : '음성은 저장됐어요. AI 분석을 다시 시도해 주세요' : '버튼을 눌러 이야기를 시작하세요'}<span>{String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:{String(recordingSeconds % 60).padStart(2, '0')}</span></p>
         {recordError && <p role="alert">{recordError}</p>}
         <div className="record-guidance"><small>이렇게 시작해 보세요</small><p>“오늘은 우리 집에서 40년 동안 만들어 온<br />소고기국 레시피를 알려줄게요.”</p></div>
         <label className={`photo-upload record-photo-button ${recordPhoto ? 'is-active' : ''}`}>{recordPhoto ? '사진이 추가됐어요' : '음식 사진 먼저 추가하기'}<input type="file" accept="image/*" onChange={(event) => setRecordPhoto(event.target.files?.[0] ?? null)} /></label>
-        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else void continueToChat() }}>{busy ? '레시피 이야기를 정리하고 있어요…' : '기록 마무리 하기'}</button>
+        <button className="record-finish" type="button" disabled={busy || recordingSeconds < 5 || (!draftId && !recording && mediaRecorder.current?.state !== 'paused')} onClick={() => { if (recording || mediaRecorder.current?.state === 'paused') finishRecording(); else if (analysis) onNavigate('chat'); else void continueToChat() }}>{busy ? '레시피 이야기를 정리하고 있어요…' : draftId ? analysis ? '음식 이야기로 돌아가기' : 'AI 분석 다시 시도하기' : '기록 마무리 하기'}</button>
       </div>
     </main>
   )
