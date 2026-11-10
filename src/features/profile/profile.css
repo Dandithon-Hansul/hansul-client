@@ -26,7 +26,6 @@
   .profile-stats > div:first-child { @apply border-l-0; }
   .profile-stats dd { @apply m-0 text-[17px] text-[#393b35]; }
   .profile-stats dt { @apply text-[11px] text-[#666159]; }
-  .profile-stats.is-two { @apply grid-cols-2; } /* 다른 사람 프로필: 저장 수 없이 2칸 */
   .profile-bio { @apply mx-[20px] mb-3 mt-0 whitespace-pre-line text-[12px] text-[#666159]; }
 
   /* 탭 */

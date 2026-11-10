@@ -77,6 +77,9 @@ export type RawPublicProfile = {
   recipe_count: number
   received_like_count: number
   recipes: RecipeThumb[]
+  /** 저장한 맛 — 백엔드 ADR-006 (저장 목록 기본 공개, 게시·공개 레시피만, 저장 시각 역순) */
+  saved_recipe_count?: number
+  saved_recipes?: Array<RecipeThumb & { transmitter_name?: string | null }>
 }
 
 /** 다른 사용자(전승자) 프로필 — 화면에서 쓰기 좋게 정리한 형태 */
@@ -90,9 +93,11 @@ export type PublicProfile = {
   bio: string | null
   stats: {
     transmitted_recipes: number
+    saved_recipes: number
     likes_received: number
   }
   recipes: RecipeThumb[]
+  saved_recipes: RecipeThumb[]
 }
 
 /**
