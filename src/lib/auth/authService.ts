@@ -70,7 +70,9 @@ const supabaseAuth: AuthService = {
     }
   },
   async signOut() {
-    await getSupabase().auth.signOut()
+    // 'local': 이 기기만 로그아웃. 기본값('global')은 그 계정의 모든 기기 세션을 끊어서,
+    // 데모 계정을 여러 명이 같이 쓰면 한 명이 로그아웃할 때 다른 사람도 로그인이 풀림
+    await getSupabase().auth.signOut({ scope: 'local' })
   },
 }
 
