@@ -1,7 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api/client'
-import { analyzeRecipe, transcribe, uploadSignedFile } from '../../lib/api/recipes'
+import { analyzeRecipe, sendRecipeChat, transcribe, uploadSignedFile } from '../../lib/api/recipes'
 import { currentPath, loginAsDemo, renderApp } from '../../test/renderApp'
 
 vi.mock('../../lib/api/recipes', async (importOriginal) => {
@@ -11,6 +11,7 @@ vi.mock('../../lib/api/recipes', async (importOriginal) => {
     uploadSignedFile: vi.fn(),
     transcribe: vi.fn(),
     analyzeRecipe: vi.fn(),
+    sendRecipeChat: vi.fn(),
   }
 })
 
@@ -92,4 +93,22 @@ describe('녹음 직후 AI 분석 실패 복구', () => {
     expect(vi.mocked(analyzeRecipe)).toHaveBeenCalledTimes(2)
     expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
   })
+})
+
+it('채팅 선택지를 표시하고 선택한 답을 중복 분석 없이 보낸다', async () => {
+  vi.mocked(analyzeRecipe).mockResolvedValue(analysis)
+  vi.mocked(sendRecipeChat).mockImplementation(async (_request, emit) => {
+    emit({ event: 'chunk', data: { text: '좋아요.' } })
+    emit({ event: 'choices', data: { question: '어느 정도 졸이나요?', options: ['되직하게', '묽게'] } })
+    emit({ event: 'done', data: {} })
+  })
+  loginAsDemo()
+  const user = renderApp('/record')
+  await user.click(await screen.findByRole('button', { name: '녹음 시작' }))
+  await act(async () => { vi.advanceTimersByTime(6000) })
+  await user.click(screen.getByRole('button', { name: '기록 마무리 하기' }))
+  await user.click(await screen.findByRole('button', { name: '재료 절반까지' }))
+  await user.click(await screen.findByRole('button', { name: '되직하게' }))
+  expect(vi.mocked(sendRecipeChat).mock.calls[1][0].message).toBe('되직하게')
+  expect(vi.mocked(analyzeRecipe)).toHaveBeenCalledTimes(1)
 })

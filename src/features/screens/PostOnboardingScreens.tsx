@@ -65,6 +65,8 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
   } | null>(null)
   const [busy, setBusy] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+  const [chatQuestion, setChatQuestion] = useState<Pick<AnalysisResult["questions"][number], "question" | "options"> | null>()
+  const activeQuestion = chatQuestion === undefined ? analysis?.questions[0] : chatQuestion
   const [quotePlaying, setQuotePlaying] = useState(false)
   const [quoteStep, setQuoteStep] = useState<'questions' | 'input' | 'confirmed' | 'skipped'>('questions')
   const [transmitterQuote, setTransmitterQuote] = useState('')
@@ -267,6 +269,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     setScreenError('')
     try {
       const result = await analyzeRecipe(currentDraftId)
+      setChatQuestion(undefined)
       setAnalysis(result)
       setQuoteStep('questions')
       setTransmitterQuote('')
@@ -280,6 +283,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     } catch (error) {
       // Keep the recorded draft and stay on the recording screen until analysis succeeds.
       // A generic chat without the first analyzed question confuses transmitters.
+      setChatQuestion(undefined)
       setAnalysis(null)
       setRecordError(`${flowErrorMessage(error, 'analysis')} 녹음은 저장됐어요. AI 분석을 다시 시도해 주세요.`)
     } finally {
@@ -347,6 +351,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       let answerText = ''
       let hasAudioSegments = false
       let hadStreamError = false
+      let nextChoice: typeof chatQuestion = null
       await sendRecipeChat({ recipe_id, message, ...(chatImagePath ? { image_path: chatImagePath } : {}), tts: true }, (event) => {
         if (event.event === 'chunk' && typeof event.data.text === 'string') {
           answerText += event.data.text
@@ -359,19 +364,21 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
         if (event.event === 'done' && !hasAudioSegments && typeof event.data.audio_url === 'string') {
           enqueueChatAudio(event.data.audio_url)
         }
+        if (event.event === 'choices') {
+          const { question, options } = event.data
+          if (typeof question === 'string' && Array.isArray(options) &&
+              options.length >= 2 && options.length <= 4 && options.every(option => typeof option === 'string')) {
+            nextChoice = { question, options }
+          }
+        }
         if (event.event === 'error') hadStreamError = true
       })
       if (hadStreamError && !answerText) throw new Error('CHAT_STREAM_FAILED')
       if (!answerText) setMessages((current) => current.filter((item) => item.responseId !== responseId))
-      if (analysis?.questions.length) {
-        const nextAnalysis = await analyzeRecipe(recipe_id)
-        setAnalysis(nextAnalysis)
-        const nextQuestion = nextAnalysis.questions[0]?.question
-        if (nextQuestion && !answerText.includes(nextQuestion)) {
-          setMessages((current) => [...current, { from: 'ai', text: nextQuestion }])
-        } else if (!nextAnalysis.questions.length) {
-          beginQuoteStep()
-        }
+      setChatQuestion(nextChoice)
+      const nextQuestion = (nextChoice as typeof chatQuestion)?.question
+      if (nextQuestion && !answerText.includes(nextQuestion)) {
+        setMessages(current => [...current, { from: 'ai', text: nextQuestion }])
       }
       setChatImagePath(undefined)
     } catch {
@@ -453,7 +460,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     setScreenError('')
     // Avoid repeatedly charging/retrying the analysis API while there are
     // still explicit questions the user has not answered.
-    if (quoteStep === 'questions' && analysis?.questions.length) {
+    if (quoteStep === 'questions' && activeQuestion) {
       setScreenError('아직 확인할 손맛 질문이 있어요. 답변을 고르거나 직접 이야기해 주세요.')
       return
     }
@@ -461,7 +468,12 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
     setBusy(true)
     try {
       if (quoteStep === 'questions') {
+        if (chatQuestion === null) {
+          beginQuoteStep()
+          return
+        }
         const result = analysis ?? await analyzeRecipe(draftId || 'draft-mock')
+        setChatQuestion(undefined)
         setAnalysis(result)
         if (result.questions.length) {
           setMessages((current) => [...current, { from: 'ai', text: result.questions[0].question }])
@@ -519,7 +531,7 @@ function PostOnboardingScreens({ page, name, region, favoriteFoods, onNavigate }
       <div className="chat-messages" aria-live="polite">
         {messages.map((message, index) => {
           const canChooseAnswer = quoteStep === 'questions' && message.from === 'ai' && index === messages.length - 1
-          const options = canChooseAnswer ? (analysis?.questions[0]?.options ?? []) : []
+          const options = canChooseAnswer ? (activeQuestion?.options ?? []) : []
           return <div className={`chat-bubble ${message.from}`} key={message.responseId ?? `${index}-${message.text}`}>
             {message.from === 'ai' && <span className="chat-bot-avatar" aria-hidden="true"><img src="/images/hansul-logo-mark.png" alt="" /></span>}
             <div className="chat-bubble-body">

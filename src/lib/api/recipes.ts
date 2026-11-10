@@ -78,7 +78,7 @@ export type AnalysisResult = {
   auto_applied: Array<{ expression: string; applied_value: unknown }>;
 };
 export type ChatEvent = {
-  event: "chunk" | "audio" | "done" | "error";
+  event: "chunk" | "audio" | "choices" | "done" | "error";
   data: Record<string, unknown>;
 };
 
