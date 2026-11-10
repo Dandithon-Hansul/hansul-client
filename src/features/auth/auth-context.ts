@@ -9,6 +9,8 @@ export type AuthContextValue = {
   signIn: (loginId: string, password: string) => Promise<AuthResult>
   signUp: (loginId: string, password: string) => Promise<AuthResult>
   signOut: () => Promise<void>
+  /** 사용자가 직접 로그아웃했는지 — 그때는 다시 로그인해도 로그아웃한 화면으로 돌아가지 않고 홈으로 */
+  signedOutByUser: boolean
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)
