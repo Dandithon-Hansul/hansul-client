@@ -162,7 +162,7 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
               <RecipePhoto className="home-recipe-photo" src={recipeImages[topRecipe.recipe_id] || topRecipe.hero_image_url} title={topRecipe.title || '전승 음식'} />
               <span className="recipe-gradient" />
               <span className="recipe-title">{String(topRecipe.rank ?? 1).padStart(2, '0')} {topRecipe.title}</span>
-            </button> : <p className="home-empty">아직 소개할 전승 음식이 없어요.</p>}
+            </button> : feed === null ? <p className="home-empty" role="status">이달의 전승 음식을 불러오는 중이에요…</p> : <p className="home-empty">아직 소개할 전승 음식이 없어요.</p>}
           </section>
 
           <section className="recipe-section recommendation-section">
@@ -173,7 +173,7 @@ function HomeScreen({ name, onNavigate, onRecipeSelect }: HomeScreenProps) {
               <span className="recipe-gradient" />
               {recommended.region_tag && <span className="recipe-location">{recommended.region_tag}</span>}
               <span className="recipe-title">{recommended.title}</span>
-            </button> : <p className="home-empty">취향에 맞는 추천 음식이 준비 중이에요.</p>}
+            </button> : feed === null ? <p className="home-empty" role="status">추천 음식을 불러오는 중이에요…</p> : <p className="home-empty">취향에 맞는 추천 음식이 준비 중이에요.</p>}
           </section>
         </>
       )}
