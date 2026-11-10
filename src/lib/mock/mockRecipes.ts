@@ -48,5 +48,8 @@ export const MOCK_PUBLIC_PROFILES: Record<string, RawPublicProfile> = {
       ['닭강정', null],
       ['누른 국수', null],
     ].map(([title, image], index): RecipeThumb => ({ recipe_id: `r-kim-${index + 1}`, title: title as string, hero_image_url: image })),
+    saved_recipe_count: 9,
+    saved_recipes: ['안동 찜닭', '헛제삿밥', '경주 쌈밥', '대구 뭉티기', '포항 물회', '영덕 대게찜', '안동 식혜', '문경 오미자청', '영주 묵밥']
+      .map((title, index) => ({ recipe_id: `r-kim-saved-${index + 1}`, title, hero_image_url: null, transmitter_name: null })),
   },
 }
