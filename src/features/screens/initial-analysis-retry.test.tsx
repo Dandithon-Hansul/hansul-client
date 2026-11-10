@@ -1,7 +1,7 @@
 import { act, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api/client'
-import { analyzeRecipe, transcribe, uploadSignedFile } from '../../lib/api/recipes'
+import { analyzeRecipe, transcribe, transcribeChatAudio, uploadSignedFile } from '../../lib/api/recipes'
 import { currentPath, loginAsDemo, renderApp } from '../../test/renderApp'
 
 vi.mock('../../lib/api/recipes', async (importOriginal) => {
@@ -10,6 +10,7 @@ vi.mock('../../lib/api/recipes', async (importOriginal) => {
     ...actual,
     uploadSignedFile: vi.fn(),
     transcribe: vi.fn(),
+    transcribeChatAudio: vi.fn(),
     analyzeRecipe: vi.fn(),
   }
 })
@@ -54,7 +55,10 @@ beforeEach(() => {
   })
   vi.mocked(uploadSignedFile).mockReset()
   vi.mocked(transcribe).mockReset()
+  vi.mocked(transcribeChatAudio).mockReset()
+  vi.mocked(transcribeChatAudio).mockResolvedValue({ transcript: '국물을 자작하게 졸여요' })
   vi.mocked(analyzeRecipe).mockReset()
+  vi.mocked(analyzeRecipe).mockResolvedValue(analysis)
   vi.mocked(uploadSignedFile).mockResolvedValue({ bucket: 'uploads', path: 'owner/stt_audio/test.webm', token: 'signed' })
   vi.mocked(transcribe).mockResolvedValue({
     transcript: '국물을 자작하게 졸여요',
@@ -90,6 +94,64 @@ describe('녹음 직후 AI 분석 실패 복구', () => {
     expect(await screen.findByText('국물이 자작하다는 것은 어느 정도인가요?')).toBeInTheDocument()
     await waitFor(() => expect(currentPath()).toHaveTextContent('/chat'))
     expect(vi.mocked(analyzeRecipe)).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
+  })
+  it('채팅 마이크 전사는 레시피 초안 대신 전사 전용 API만 호출한다', async () => {
+    loginAsDemo()
+    const user = renderApp('/record')
+
+    await user.click(await screen.findByRole('button', { name: '녹음 시작' }))
+    await act(async () => { vi.advanceTimersByTime(6000) })
+    await user.click(screen.getByRole('button', { name: '기록 마무리 하기' }))
+    expect(await screen.findByText('국물이 자작하다는 것은 어느 정도인가요?')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '음성 입력' }))
+    await user.click(screen.getByRole('button', { name: '음성 입력 마치기' }))
+    await waitFor(() => expect(vi.mocked(transcribeChatAudio)).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(transcribeChatAudio)).toHaveBeenCalledWith('uploads/owner/stt_audio/test.webm')
+    expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(uploadSignedFile)).toHaveBeenNthCalledWith(2, expect.any(File), 'stt_audio')
+    expect(screen.getByRole('textbox', { name: '메시지' })).toHaveValue('국물을 자작하게 졸여요')
+  })
+
+  it('녹음 중 선택한 사진도 현재 ref 값으로 업로드한다', async () => {
+    loginAsDemo()
+    const user = renderApp('/record')
+    await user.click(await screen.findByRole('button', { name: '녹음 시작' }))
+    const photo = new File(['image bytes'], 'dish.png', { type: 'image/png' })
+    const input = document.querySelector('.record-photo-button input[type="file"]') as HTMLInputElement
+    await user.upload(input, photo)
+    expect(screen.getByText('사진이 추가됐어요')).toBeInTheDocument()
+
+    await act(async () => { vi.advanceTimersByTime(6000) })
+    await user.click(screen.getByRole('button', { name: '기록 마무리 하기' }))
+    await waitFor(() => expect(vi.mocked(uploadSignedFile)).toHaveBeenCalledWith(
+      photo, 'chat_image', 'a2332e02-bd86-4120-aa60-cc3fc01c99de',
+    ))
+    expect(await screen.findByText('국물이 자작하다는 것은 어느 정도인가요?')).toBeInTheDocument()
+    expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
+  })
+
+  it('사진 업로드 415 실패를 오디오 형식 오류로 표시하지 않고 초안을 보존한다', async () => {
+    vi.mocked(uploadSignedFile).mockResolvedValueOnce({
+      bucket: 'uploads', path: 'owner/stt_audio/test.webm', token: 'signed',
+    }).mockRejectedValueOnce(new ApiError(415, 'UNSUPPORTED_IMAGE', 'image content error'))
+
+    loginAsDemo()
+    const user = renderApp('/record')
+    await user.click(await screen.findByRole('button', { name: '녹음 시작' }))
+    const photo = new File(['image bytes'], 'dish.png', { type: 'image/png' })
+    await user.upload(document.querySelector('.record-photo-button input') as HTMLInputElement, photo)
+    await act(async () => { vi.advanceTimersByTime(6000) })
+    await user.click(screen.getByRole('button', { name: '기록 마무리 하기' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('음식 사진을 올리지 못했어요')
+    expect(screen.queryByText('지원하지 않는 오디오 형식이에요')).not.toBeInTheDocument()
+    expect(currentPath()).toHaveTextContent('/record')
+    expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
+
+    await user.click(screen.getByRole('button', { name: 'AI 분석 다시 시도하기' }))
+    expect(await screen.findByText('국물이 자작하다는 것은 어느 정도인가요?')).toBeInTheDocument()
     expect(vi.mocked(transcribe)).toHaveBeenCalledTimes(1)
   })
 })
