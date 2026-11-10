@@ -21,11 +21,15 @@
   .profile-edit-button { @apply shrink-0 rounded-full border border-[#ded7ca] bg-white px-3 py-1.5 text-[11px] text-[#5e5850] no-underline; }
 
   /* 통계 */
-  .profile-stats { @apply mx-[20px] my-0 grid grid-cols-3 border-y border-[#ece8e0] py-[14px]; }
-  .profile-stats > div { @apply flex flex-col-reverse items-center gap-1.5 border-l border-[#ece8e0]; }
-  .profile-stats > div:first-child { @apply border-l-0; }
-  .profile-stats dd { @apply m-0 text-[17px] text-[#393b35]; }
-  .profile-stats dt { @apply text-[11px] text-[#666159]; }
+  /*
+   * 숫자 3칸 — .profile-page 아래로 한정: post-onboarding.css 에도 같은 이름(.profile-stats, display:flex)이 있어
+   * 빌드 후 덮어쓰이면 칸이 글자 폭만큼 줄고 구분선이 글자 옆에 붙어 가운데가 안 맞았음
+   */
+  .profile-page .profile-stats { @apply mx-[20px] my-0 grid grid-cols-3 justify-normal border-y border-[#ece8e0] px-0 py-[14px]; }
+  .profile-page .profile-stats > div { @apply flex w-full flex-col-reverse items-center gap-1.5 border-l border-[#ece8e0] text-center; }
+  .profile-page .profile-stats > div:first-child { @apply border-l-0; }
+  .profile-page .profile-stats dd { @apply m-0 text-[17px] text-[#393b35]; }
+  .profile-page .profile-stats dt { @apply text-[11px] text-[#666159]; }
   .profile-bio { @apply mx-[20px] mb-3 mt-0 whitespace-pre-line text-[12px] text-[#666159]; }
 
   /* 탭 */
