@@ -41,7 +41,8 @@
   .journey-step-text { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
   .journey-back { @apply absolute z-10 grid h-8 w-8 cursor-pointer place-items-center border-0 bg-transparent text-[25px] text-[#817b71]; top: calc(env(safe-area-inset-top) + 77px); left: 19px; }
   .chat-page { @apply flex h-svh flex-col overflow-hidden bg-[#f4efe8] pb-[calc(env(safe-area-inset-bottom)+174px)]; padding-top: calc(env(safe-area-inset-top) + 133px); }
-  .chat-messages { @apply flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto overscroll-contain pr-1; }
+  .chat-messages { @apply flex min-h-0 flex-1 flex-col gap-[22px] overflow-y-auto overscroll-contain pr-1; scrollbar-width:none; -ms-overflow-style:none; }
+  .chat-messages::-webkit-scrollbar { display:none; }
   .chat-bubble { @apply flex max-w-full items-start gap-[11px]; }
   .chat-bubble.ai { @apply self-start; width:100%; }
   .chat-bubble.user { @apply self-end; max-width:86%; }
